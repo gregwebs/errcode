@@ -53,7 +53,7 @@ It is easy to gradually introduce it into a project that is using pkg/errors (or
 type PathBlocked struct {
 	start     uint64 `json:"start"`
 	end       uint64 `json:"end"`
-	obstacle  uint64 `json:"end"`
+	obstacle  uint64 `json:"obstacle"`
 }
 
 func (e PathBlocked) Error() string {
