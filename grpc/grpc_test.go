@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pingcap/errcode"
-	"github.com/pingcap/errcode/grpc"
+	"github.com/gregwebs/errcode"
+	"github.com/gregwebs/errcode/grpc"
 	"google.golang.org/grpc/codes"
 )
 

@@ -14,7 +14,7 @@
 // Package errcode facilitates standardized API error codes.
 // The goal is that clients can reliably understand errors by checking against immutable error codes
 //
-// This godoc documents usage. For broader context, see https://github.com/pingcap/errcode/tree/master/README.md
+// This godoc documents usage. For broader context, see https://github.com/gregwebs/errcode/tree/master/README.md
 //
 // Error codes are represented as strings by CodeStr (see CodeStr documentation).
 //

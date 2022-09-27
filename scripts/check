@@ -11,7 +11,7 @@ pushd tools
 popd
 
 # Some linters only work if code is vendored
-GO111MODULE=on go mod vendor
+# GO111MODULE=on go mod vendor
 
 echo "linting"
 ./tools/bin/revive -formatter friendly -config conf/revive.toml ${PKGS}
