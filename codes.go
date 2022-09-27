@@ -64,10 +64,10 @@ var (
 	UnprocessableEntityCode = StateCode.Child("state.unprocessable").SetHTTP(http.StatusUnprocessableEntity)
 )
 
-// invalidInput gives the code InvalidInputCode.
+// invalidInputErr gives the code InvalidInputCode.
 type invalidInputErr struct{ CodedError }
 
-// NewInvalidInputErr creates an invalidInput from an err.
+// NewInvalidInputErr creates an invalidInputErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use InvalidInputCode which gives HTTP 400.
 func NewInvalidInputErr(err error) ErrorCode {
@@ -78,23 +78,33 @@ var _ ErrorCode = (*invalidInputErr)(nil)     // assert implements interface
 var _ HasClientData = (*invalidInputErr)(nil) // assert implements interface
 var _ Causer = (*invalidInputErr)(nil)        // assert implements interface
 
-// internalError gives the code InternalCode
-type internalErr struct{ StackCode }
+// badReqeustErr gives the code BadRequestErr.
+type BadRequestErr struct{ CodedError }
+
+// NewBadRequestErr creates a BadReqeustErr from an err.
+// If the error is already an ErrorCode it will use that code.
+// Otherwise it will use BadRequestCode which gives HTTP 400.
+func NewBadRequestErr(err error) BadRequestErr {
+	return BadRequestErr{NewCodedError(err, InvalidInputCode)}
+}
+
+// InternalErr gives the code InternalCode
+type InternalErr struct{ StackCode }
 
 var internalStackCode = makeInternalStackCode(InternalCode)
 
-// NewInternalErr creates an internalError from an err.
+// NewInternalErr creates an InternalErr from an err.
 // If the given err is an ErrorCode that is a descendant of InternalCode,
 // its code will be used.
 // This ensures the intention of sending an HTTP 50x.
 // This function also records a stack trace.
-func NewInternalErr(err error) ErrorCode {
-	return internalErr{internalStackCode(err)}
+func NewInternalErr(err error) InternalErr {
+	return InternalErr{internalStackCode(err)}
 }
 
-var _ ErrorCode = (*internalErr)(nil)     // assert implements interface
-var _ HasClientData = (*internalErr)(nil) // assert implements interface
-var _ Causer = (*internalErr)(nil)        // assert implements interface
+var _ ErrorCode = (*InternalErr)(nil)     // assert implements interface
+var _ HasClientData = (*InternalErr)(nil) // assert implements interface
+var _ Causer = (*InternalErr)(nil)        // assert implements interface
 
 // makeInternalStackCode builds a function for making an an internal error with a stack trace.
 func makeInternalStackCode(defaultCode Code) func(error) StackCode {
@@ -120,7 +130,7 @@ type UnimplementedErr struct{ StackCode }
 
 var unimplementedStackCode = makeInternalStackCode(UnimplementedCode)
 
-// NewUnimplementedErr creates an internalError from an err.
+// NewUnimplementedErr creates an InternalErr from an err.
 // If the given err is an ErrorCode that is a descendant of InternalCode,
 // its code will be used.
 // This ensures the intention of sending an HTTP 50x.
@@ -133,7 +143,7 @@ type UnavailableErr struct{ StackCode }
 
 var unavailableStackCode = makeInternalStackCode(UnavailableCode)
 
-// NewUnavailableErr creates an internalError from an err.
+// NewUnavailableErr creates an InternalErr from an err.
 // If the given err is an ErrorCode that is a descendant of InternalCode,
 // its code will be used.
 // This ensures the intention of sending an HTTP 50x.
@@ -156,19 +166,19 @@ var _ ErrorCode = (*NotFoundErr)(nil)     // assert implements interface
 var _ HasClientData = (*NotFoundErr)(nil) // assert implements interface
 var _ Causer = (*NotFoundErr)(nil)        // assert implements interface
 
-// notAuthenticatedErr gives the code NotAuthenticatedCode.
-type notAuthenticatedErr struct{ CodedError }
+// NotAuthenticatedErr gives the code NotAuthenticatedCode.
+type NotAuthenticatedErr struct{ CodedError }
 
-// NewNotAuthenticatedErr creates a notAuthenticatedErr from an err.
+// NewNotAuthenticatedErr creates a NotAuthenticatedErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use NotAuthenticatedCode which gives HTTP 401.
-func NewNotAuthenticatedErr(err error) ErrorCode {
-	return notAuthenticatedErr{NewCodedError(err, NotAuthenticatedCode)}
+func NewNotAuthenticatedErr(err error) NotAuthenticatedErr {
+	return NotAuthenticatedErr{NewCodedError(err, NotAuthenticatedCode)}
 }
 
-var _ ErrorCode = (*notAuthenticatedErr)(nil)     // assert implements interface
-var _ HasClientData = (*notAuthenticatedErr)(nil) // assert implements interface
-var _ Causer = (*notAuthenticatedErr)(nil)        // assert implements interface
+var _ ErrorCode = (*NotAuthenticatedErr)(nil)     // assert implements interface
+var _ HasClientData = (*NotAuthenticatedErr)(nil) // assert implements interface
+var _ Causer = (*NotAuthenticatedErr)(nil)        // assert implements interface
 
 // ForbiddenErr gives the code ForbiddenCode.
 type ForbiddenErr struct{ CodedError }
@@ -209,7 +219,7 @@ func NewNotAcceptableErr (err error) NotAcceptableErr {
 //
 // To override the http code or the data representation or just for clearer documentation,
 // you are encouraged to wrap CodeError with your own struct that inherits it.
-// Look at the implementation of invalidInput, internalError, and notFound.
+// Look at the implementation of invalidInput, InternalErr, and notFound.
 type CodedError struct {
 	GetCode Code
 	Err     error

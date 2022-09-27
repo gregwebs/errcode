@@ -75,11 +75,22 @@ func (code Code) SetHTTP(httpCode int) Code {
 }
 
 // HTTPCode retrieves the HTTP code for a code or its first ancestor with an HTTP code.
+// If none are specified, it returns nil
+func HTTPCode(code Code) *int {
+	httpCode := code.MetaDataFromAncestors(httpMetaData)
+	if httpCode == nil {
+		return nil
+	}
+	i := httpCode.(int)
+	return &i
+}
+
+// HTTPCode retrieves the HTTP code for a code or its first ancestor with an HTTP code.
 // If none are specified, it defaults to 400 BadRequest
 func (code Code) HTTPCode() int {
-	httpCode := code.MetaDataFromAncestors(httpMetaData)
+	httpCode := HTTPCode(code)
 	if httpCode == nil {
 		return http.StatusBadRequest
 	}
-	return httpCode.(int)
+	return *httpCode
 }
