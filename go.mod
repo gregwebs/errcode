@@ -1,4 +1,6 @@
-module github.com/pingcap/errcode
+module github.com/gregwebs/errcode
+
+replace github.com/pingcap/errcode => github.com/gregwebs/errcode
 
 require (
 	github.com/golang/protobuf v1.2.0 // indirect
