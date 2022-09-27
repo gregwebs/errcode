@@ -180,6 +180,10 @@ func NewForbiddenErr(err error) ForbiddenErr {
 	return ForbiddenErr{NewCodedError(err, ForbiddenCode)}
 }
 
+var _ ErrorCode = (*ForbiddenErr)(nil)     // assert implements interface
+var _ HasClientData = (*ForbiddenErr)(nil) // assert implements interface
+var _ Causer = (*ForbiddenErr)(nil)        // assert implements interface
+
 // UnprocessableErr gives the code UnprocessibleCode.
 type UnprocessableErr struct{ CodedError }
 
@@ -190,10 +194,15 @@ func NewUnprocessableErr (err error) UnprocessableErr {
 	return UnprocessableErr{NewCodedError(err, UnprocessableEntityCode)}
 }
 
+// NotAcceptableErr gives the code NotAcceptableCode.
+type NotAcceptableErr struct{ CodedError }
 
-var _ ErrorCode = (*ForbiddenErr)(nil)     // assert implements interface
-var _ HasClientData = (*ForbiddenErr)(nil) // assert implements interface
-var _ Causer = (*ForbiddenErr)(nil)        // assert implements interface
+// NewUnprocessableErr creates an UnprocessableErr from an err.
+// If the error is already an ErrorCode it will use that code.
+// Otherwise it will use ForbiddenCode which gives HTTP 401.
+func NewNotAcceptableErr (err error) NotAcceptableErr {
+	return NotAcceptableErr{NewCodedError(err, NotAcceptableCode)}
+}
 
 // CodedError is a convenience to attach a code to an error and already satisfy the ErrorCode interface.
 // If the error is a struct, that struct will get preseneted as data to the client.
