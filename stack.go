@@ -20,7 +20,7 @@ import (
 // StackTrace retrieves the errors.StackTrace from the error if it is present.
 // If there is not StackTrace it will return nil
 //
-// StackTrace looks to see if the error is a StackTracer or if a Causer of the error is a StackTracer.
+// StackTrace looks to see if the error is a StackTracer or if an Unwrap of the error is a StackTracer.
 // It will return the stack trace from the deepest error it can find.
 func StackTrace(err error) errors.StackTrace {
 	if tracer := errors.GetStackTracer(err); tracer != nil {
@@ -66,8 +66,8 @@ func NewStackCode(err ErrorCode, position ...int) StackCode {
 	return StackCode{Err: err, GetStack: errors.NewStack(stackPosition)}
 }
 
-// Cause satisfies the Causer interface
-func (e StackCode) Cause() error {
+// Unwrap satisfies the errors package Unwrap function
+func (e StackCode) Unwrap() error {
 	return e.Err
 }
 
@@ -88,4 +88,4 @@ func (e StackCode) GetClientData() interface{} {
 
 var _ ErrorCode = (*StackCode)(nil)     // assert implements interface
 var _ HasClientData = (*StackCode)(nil) // assert implements interface
-var _ Causer = (*StackCode)(nil)        // assert implements interface
+var _ unwrapper = (*StackCode)(nil)        // assert implements interface

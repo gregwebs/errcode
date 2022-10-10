@@ -76,7 +76,7 @@ func NewInvalidInputErr(err error) ErrorCode {
 
 var _ ErrorCode = (*invalidInputErr)(nil)     // assert implements interface
 var _ HasClientData = (*invalidInputErr)(nil) // assert implements interface
-var _ Causer = (*invalidInputErr)(nil)        // assert implements interface
+var _ unwrapper = (*invalidInputErr)(nil)        // assert implements interface
 
 // badReqeustErr gives the code BadRequestErr.
 type BadRequestErr struct{ CodedError }
@@ -104,7 +104,7 @@ func NewInternalErr(err error) InternalErr {
 
 var _ ErrorCode = (*InternalErr)(nil)     // assert implements interface
 var _ HasClientData = (*InternalErr)(nil) // assert implements interface
-var _ Causer = (*InternalErr)(nil)        // assert implements interface
+var _ unwrapper = (*InternalErr)(nil)        // assert implements interface
 
 // makeInternalStackCode builds a function for making an an internal error with a stack trace.
 func makeInternalStackCode(defaultCode Code) func(error) StackCode {
@@ -164,7 +164,7 @@ func NewNotFoundErr(err error) NotFoundErr {
 
 var _ ErrorCode = (*NotFoundErr)(nil)     // assert implements interface
 var _ HasClientData = (*NotFoundErr)(nil) // assert implements interface
-var _ Causer = (*NotFoundErr)(nil)        // assert implements interface
+var _ unwrapper = (*NotFoundErr)(nil)        // assert implements interface
 
 // NotAuthenticatedErr gives the code NotAuthenticatedCode.
 type NotAuthenticatedErr struct{ CodedError }
@@ -178,7 +178,7 @@ func NewNotAuthenticatedErr(err error) NotAuthenticatedErr {
 
 var _ ErrorCode = (*NotAuthenticatedErr)(nil)     // assert implements interface
 var _ HasClientData = (*NotAuthenticatedErr)(nil) // assert implements interface
-var _ Causer = (*NotAuthenticatedErr)(nil)        // assert implements interface
+var _ unwrapper = (*NotAuthenticatedErr)(nil)        // assert implements interface
 
 // ForbiddenErr gives the code ForbiddenCode.
 type ForbiddenErr struct{ CodedError }
@@ -192,7 +192,7 @@ func NewForbiddenErr(err error) ForbiddenErr {
 
 var _ ErrorCode = (*ForbiddenErr)(nil)     // assert implements interface
 var _ HasClientData = (*ForbiddenErr)(nil) // assert implements interface
-var _ Causer = (*ForbiddenErr)(nil)        // assert implements interface
+var _ unwrapper = (*ForbiddenErr)(nil)        // assert implements interface
 
 // UnprocessableErr gives the code UnprocessibleCode.
 type UnprocessableErr struct{ CodedError }
@@ -244,14 +244,14 @@ func NewCodedError(err error, code Code) CodedError {
 
 var _ ErrorCode = (*CodedError)(nil)     // assert implements interface
 var _ HasClientData = (*CodedError)(nil) // assert implements interface
-var _ Causer = (*CodedError)(nil)        // assert implements interface
+var _ unwrapper = (*CodedError)(nil)        // assert implements interface
 
 func (e CodedError) Error() string {
 	return e.Err.Error()
 }
 
-// Cause satisfies the Causer interface.
-func (e CodedError) Cause() error {
+// Unwrap satisfies the errors package Unwrwap function.
+func (e CodedError) Unwrap() error {
 	return e.Err
 }
 

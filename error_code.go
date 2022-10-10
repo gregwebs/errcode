@@ -21,7 +21,7 @@
 // This package is designed to have few opinions and be a starting point for how you want to do errors in your project.
 // The main requirement is to satisfy the ErrorCode interface by attaching a Code to an Error.
 // See the documentation of ErrorCode.
-// Additional optional interfaces HasClientData, HasOperation, Causer, and StackTracer are provided for extensibility
+// Additional optional interfaces HasClientData, HasOperation, StackTracer, and the Unwrap method are used for extensibility
 // in creating structured error data representations.
 //
 // Hierarchies are supported: a Code can point to a parent.
@@ -155,14 +155,12 @@ type ErrorCode interface {
 	Code() Code
 }
 
-// Causer allows the abstract retrieval of the underlying error.
-// This is the interface that pkg/errors does not export but is considered part of the stable public API.
-// TODO: export this from pkg/errors
-//
+// unwrapper allows the abstract retrieval of the underlying error.
+// Formalize the Unwrap interface, but don't export it.
+// The standard library errors package should export it.
 // Types that wrap errors should implement this to allow viewing of the underlying error.
-// Generally you would use this via pkg/errors.Cause or pkg/errors.Unwrap.
-type Causer interface {
-	Cause() error
+type unwrapper interface {
+	Unwrap() error
 }
 
 // HasClientData is used to defined how to retrieve the data portion of an ErrorCode to be returned to the client.

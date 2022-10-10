@@ -43,13 +43,12 @@ func (wrapper codeStatus) GRPCStatus() *status.Status {
 	return Status(wrapper.ErrorCode)
 }
 
-func (wrapper codeStatus) Cause() error {
+func (wrapper codeStatus) Unwrap() error {
 	return wrapper.ErrorCode
 }
 
 var _ errcode.ErrorCode = (*codeStatus)(nil)     // assert implements interface
 var _ StatusGRPC = (*codeStatus)(nil)     // assert implements interface
-var _ errcode.Causer = (*codeStatus)(nil)     // assert implements interface
 
 
 // WrapAsGRPC constructs a value that responds as both an ErrorCode and as a GRPC status

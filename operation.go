@@ -56,8 +56,8 @@ type OpErrCode struct {
 	Err       ErrorCode
 }
 
-// Cause satisfies the Causer interface
-func (e OpErrCode) Cause() error {
+// Unwrap satisfies the errors package Unwrap function
+func (e OpErrCode) Unwrap() error {
 	return e.Err
 }
 
@@ -84,7 +84,7 @@ func (e OpErrCode) GetClientData() interface{} {
 var _ ErrorCode = (*OpErrCode)(nil)     // assert implements interface
 var _ HasClientData = (*OpErrCode)(nil) // assert implements interface
 var _ HasOperation = (*OpErrCode)(nil)  // assert implements interface
-var _ Causer = (*OpErrCode)(nil)        // assert implements interface
+var _ unwrapper = (*OpErrCode)(nil)        // assert implements interface
 
 // AddOp is constructed by Op. It allows method chaining with AddTo.
 type AddOp func(ErrorCode) OpErrCode

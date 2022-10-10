@@ -1,13 +1,12 @@
 ## About Error codes
 
-Error codes reliably communicate the error type, particularly across program (network) boundaries.
+Error codes reliably communicate the error type, particularly across program or network boundaries.
 A program can reliably respond to an error if it can be sure to understand its type.
-Error monitoring systems can reliably understand what errors are occurring.
+Error monitoring systems can reliably understand (dedup) what errors are occurring and metrics can easily be generated.
 
 ## status
 
 This library is in a completed state.
-It should be updated now though for some of the changes to golang for error wrapping.
 
 # errcode overview
 
@@ -24,18 +23,18 @@ However, they almost universally use a single underlying error struct.
 A code or other annotation is a field on that struct.
 In most cases a structured error response is only possible to create dynamically via tags and labels.
 
-errcode instead follows the model of pkg/errors to use wrapping and interfaces.
+errcode instead follows the model of gregwebs/errors to use wrapping and interfaces.
 You are encouraged to make your own error structures and then fulfill the ErrorCode interface by adding a function.
 Additional features (for example annotating the operation) are done via wrapping.
 
 This design makes errcode highly extensible, inter-operable, and structure preserving (of the original error).
-It is easy to gradually introduce it into a project that is using pkg/errors (or the Cause interface).
+It is easy to gradually introduce errcode into a project.
 
 
 ## Features
 
 * structured error representation
-* Follows the pkg/errors model where error enhancements are annotations via the Causer interface.
+* Uses the Unwrap model where errors can be annotated and the underlying code can be unwrapped
 * Internal errors show a stack trace but others don't.
 * Operation annotation. This concept is [explained here](https://commandcenter.blogspot.com/2017/12/error-handling-in-upspin.html).
 * Works for multiple errors when the Errors() interface is used. See the `Combine` function for constructing multiple error codes.

@@ -60,7 +60,7 @@ func Combine(initial ErrorCode, others ...ErrorCode) MultiErrCode {
 
 var _ ErrorCode = (*MultiErrCode)(nil)         // assert implements interface
 var _ HasClientData = (*MultiErrCode)(nil)     // assert implements interface
-var _ Causer = (*MultiErrCode)(nil)            // assert implements interface
+var _ unwrapper = (*MultiErrCode)(nil)            // assert implements interface
 var _ errors.ErrorGroup = (*MultiErrCode)(nil) // assert implements interface
 var _ fmt.Formatter = (*MultiErrCode)(nil)     // assert implements interface
 
@@ -82,8 +82,8 @@ func (e MultiErrCode) Code() Code {
 	return e.ErrCode.Code()
 }
 
-// Cause fullfills the Causer inteface
-func (e MultiErrCode) Cause() error {
+// Unwrap fullfills the errors package Unwrap function
+func (e MultiErrCode) Unwrap() error {
 	return e.ErrCode
 }
 
@@ -148,7 +148,7 @@ func CodeChain(err error) ErrorCode {
 // ChainContext is returned by ErrorCodeChain
 // to retain the full wrapped error message of the error chain.
 // If you annotated an ErrorCode with additional information, it is retained in the Top field.
-// The Top field is used for the Error() and Cause() methods.
+// The Top field is used for the Error() and Unwrap() methods.
 type ChainContext struct {
 	Top     error
 	ErrCode ErrorCode
@@ -164,8 +164,8 @@ func (err ChainContext) Error() string {
 	return err.Top.Error()
 }
 
-// Cause satisfies the Causer interface
-func (err ChainContext) Cause() error {
+// Unwrap satisfies the errors package Unwrap function
+func (err ChainContext) Unwrap() error {
 	if wrapped := errors.Unwrap(err.Top); wrapped != nil {
 		return wrapped
 	}
@@ -179,7 +179,7 @@ func (err ChainContext) GetClientData() interface{} {
 
 var _ ErrorCode = (*ChainContext)(nil)
 var _ HasClientData = (*ChainContext)(nil)
-var _ Causer = (*ChainContext)(nil)
+var _ unwrapper = (*ChainContext)(nil)
 
 // Format implements the Formatter interface
 func (err ChainContext) Format(s fmt.State, verb rune) {
