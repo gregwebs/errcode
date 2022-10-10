@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/pingcap/errors"
+	"github.com/gregwebs/errors"
 )
 
 // MetaData is used in a pattern for attaching meta data to codes and inheriting it from a parent.

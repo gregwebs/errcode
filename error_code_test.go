@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/gregwebs/errcode"
-	"github.com/pingcap/errors"
+	"github.com/gregwebs/errors"
 )
 
 // Test setting the HTTP code

@@ -46,7 +46,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pingcap/errors"
+	"github.com/gregwebs/errors"
 )
 
 // CodeStr is the name of the error code.

@@ -19,7 +19,7 @@ package grpc
 
 import (
 	"github.com/gregwebs/errcode"
-	"github.com/pingcap/errors"
+	"github.com/gregwebs/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

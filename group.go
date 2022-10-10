@@ -16,7 +16,7 @@ package errcode
 import (
 	"fmt"
 
-	"github.com/pingcap/errors"
+	"github.com/gregwebs/errors"
 )
 
 // ErrorCodes return all errors (from an ErrorGroup) that are of interface ErrorCode.
