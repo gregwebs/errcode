@@ -113,7 +113,7 @@ func makeInternalStackCode(defaultCode Code) func(error) StackCode {
 	}
 	return func(err error) StackCode {
 		if err == nil {
-			panic("makeInternalStackCode error is nil")
+			panic(fmt.Sprintf("makeInternalStackCode %v error is nil", defaultCode))
 		}
 		code := defaultCode
 		if errcode, ok := err.(ErrorCode); ok {
