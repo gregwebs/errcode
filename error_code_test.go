@@ -314,14 +314,14 @@ func TestErrorCodeChain(t *testing.T) {
 
 	code := MinimalError{}
 	AssertCodeChain(t, code, code)
-	ann := errors.Annotate(code, "added annotation")
+	ann := errors.Wrap(code, "added annotation")
 	AssertCodeChain(t, ann, errcode.ChainContext{Top: ann, ErrCode: code})
-	ann2 := errors.Annotate(ann, "another annotation")
+	ann2 := errors.Wrap(ann, "another annotation")
 	AssertCodeChain(t, ann2, errcode.ChainContext{Top: ann2, ErrCode: code})
 
 	code2 := MinimalError{}
 	multiCode := errcode.Combine(code, code2)
-	annMultiCode := errors.Annotate(multiCode, "multi ann")
+	annMultiCode := errors.Wrap(multiCode, "multi ann")
 	AssertCodeChain(t, annMultiCode, errcode.ChainContext{Top: annMultiCode, ErrCode: multiCode})
 	multiErr := MultiErrors{Multi: []error{errors.New("ignore"), annMultiCode}}
 	AssertCodeChain(t, multiErr, errcode.ChainContext{Top: multiErr, ErrCode: multiCode})

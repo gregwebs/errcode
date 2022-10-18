@@ -70,7 +70,7 @@ var grpcMetaData = make(errcode.MetaData)
 // Returns itself.
 func SetCode(code errcode.Code, grpcCode codes.Code) errcode.Code {
 	if err := code.SetMetaData(grpcMetaData, grpcCode); err != nil {
-		panic(errors.Annotate(err, "SetGRPC"))
+		panic(errors.Wrap(err, "SetGRPC"))
 	}
 	return code
 }

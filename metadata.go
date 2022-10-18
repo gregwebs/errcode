@@ -69,7 +69,7 @@ var httpMetaData = make(MetaData)
 // Returns itself.
 func (code Code) SetHTTP(httpCode int) Code {
 	if err := code.SetMetaData(httpMetaData, httpCode); err != nil {
-		panic(errors.Annotate(err, "SetHTTP"))
+		panic(errors.Wrap(err, "SetHTTP"))
 	}
 	return code
 }
