@@ -199,7 +199,7 @@ type UnprocessableErr struct{ CodedError }
 
 // NewUnprocessableErr creates an UnprocessableErr from an err.
 // If the error is already an ErrorCode it will use that code.
-// Otherwise it will use ForbiddenCode which gives HTTP 401.
+// Otherwise it will use UnprocessableEntityCode which gives HTTP 422.
 func NewUnprocessableErr (err error) UnprocessableErr {
 	return UnprocessableErr{NewCodedError(err, UnprocessableEntityCode)}
 }
@@ -209,7 +209,7 @@ type NotAcceptableErr struct{ CodedError }
 
 // NewUnprocessableErr creates an UnprocessableErr from an err.
 // If the error is already an ErrorCode it will use that code.
-// Otherwise it will use ForbiddenCode which gives HTTP 401.
+// Otherwise it will use NotAcceptableCode which gives HTTP 406.
 func NewNotAcceptableErr (err error) NotAcceptableErr {
 	return NotAcceptableErr{NewCodedError(err, NotAcceptableCode)}
 }
