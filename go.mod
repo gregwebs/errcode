@@ -3,7 +3,7 @@ module github.com/gregwebs/errcode
 go 1.19
 
 require (
-	github.com/gregwebs/errors v0.13.1
+	github.com/gregwebs/errors v1.0.0
 	google.golang.org/grpc v1.49.0
 )
 
