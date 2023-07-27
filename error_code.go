@@ -132,7 +132,7 @@ func (code Code) IsAncestor(ancestorCode Code) bool {
 // For an application specific error with a 1:1 mapping between a go error structure and a RegisteredCode,
 // You probably want to use this interface directly. Example:
 //
-// 	// First define a normal error type
+//	// First define a normal error type
 //	type PathBlocked struct {
 //		start     uint64 `json:"start"`
 //		end       uint64 `json:"end"`
@@ -146,7 +146,7 @@ func (code Code) IsAncestor(ancestorCode Code) bool {
 //	// Now define the code
 //	var PathBlockedCode = errcode.StateCode.Child("state.blocked")
 //
-// 	// Now attach the code to the error type
+//	// Now attach the code to the error type
 //	func (e PathBlocked) Code() Code {
 //		return PathBlockedCode
 //	}
