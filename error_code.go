@@ -219,9 +219,9 @@ func OperationClientData(errCode ErrorCode) (string, interface{}) {
 func NewJSONFormat(errCode ErrorCode) JSONFormat {
 	// Gather up multiple errors.
 	// We discard any that are not ErrorCode.
-	errorCodes := ErrorCodes(errCode)
-	others := make([]JSONFormat, len(errorCodes)-1)
-	for i, err := range errorCodes[1:] {
+	errorCodes := ErrorCodes(errCode)[1:]
+	others := make([]JSONFormat, len(errorCodes))
+	for i, err := range errorCodes {
 		others[i] = NewJSONFormat(err)
 	}
 
