@@ -23,10 +23,10 @@ import (
 // It first calls the Errors function.
 func ErrorCodes(err error) []ErrorCode {
 	errors := errors.Errors(err)
-	errorCodes := make([]ErrorCode, len(errors))
-	for i, errItem := range errors {
+	errorCodes := make([]ErrorCode, 0, len(errors))
+	for _, errItem := range errors {
 		if errcode, ok := errItem.(ErrorCode); ok {
-			errorCodes[i] = errcode
+			errorCodes = append(errorCodes, errcode)
 		}
 	}
 	return errorCodes
@@ -60,7 +60,7 @@ func Combine(initial ErrorCode, others ...ErrorCode) MultiErrCode {
 
 var _ ErrorCode = (*MultiErrCode)(nil)         // assert implements interface
 var _ HasClientData = (*MultiErrCode)(nil)     // assert implements interface
-var _ unwrapper = (*MultiErrCode)(nil)            // assert implements interface
+var _ unwrapper = (*MultiErrCode)(nil)         // assert implements interface
 var _ errors.ErrorGroup = (*MultiErrCode)(nil) // assert implements interface
 var _ fmt.Formatter = (*MultiErrCode)(nil)     // assert implements interface
 
