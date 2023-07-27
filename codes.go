@@ -37,8 +37,9 @@ var (
 	StateCode = NewCode("state").SetHTTP(http.StatusBadRequest)
 
 	// AlreadyExistsCode indicates an attempt to create an entity failed because it already exists.
-	// This is mapped to HTTP 409.
-	AlreadyExistsCode = StateCode.Child("state.exists").SetHTTP(http.StatusConflict)
+	// This is mapped to HTTP 422. 409 is sometimes used in these cases, but 409 is supposed to be for re-submittable errors.
+  // It would also be possible to use a 400
+	AlreadyExistsCode = StateCode.Child("state.exists").SetHTTP(http.StatusUnprocessableEntity)
 
 	// OutOfRangeCode indicates an operation was attempted past a valid range.
 	// This is mapped to HTTP 400.
@@ -213,6 +214,16 @@ type NotAcceptableErr struct{ CodedError }
 func NewNotAcceptableErr (err error) NotAcceptableErr {
 	return NotAcceptableErr{NewCodedError(err, NotAcceptableCode)}
 }
+
+type AlreadyExistsErr struct{ CodedError }
+
+// NewAlreadyExistsErr creates an AlreadyExistsErr from an err.
+// If the error is already an ErrorCode it will use that code.
+// Otherwise it will use AlreadyExistsCode which gives HTTP 409.
+func NewAlreadyExistsErr(err error) AlreadyExistsErr {
+	return AlreadyExistsErr{NewCodedError(err, AlreadyExistsCode)}
+}
+
 
 // CodedError is a convenience to attach a code to an error and already satisfy the ErrorCode interface.
 // If the error is a struct, that struct will get preseneted as data to the client.
