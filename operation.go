@@ -29,12 +29,14 @@ type HasOperation interface {
 }
 
 // Operation will return an operation string if it exists.
-// It checks for the HasOperation interface.
+// It checks recursively for the HasOperation interface.
 // Otherwise it will return the zero value (empty) string.
 func Operation(v interface{}) string {
 	var operation string
 	if hasOp, ok := v.(HasOperation); ok {
 		operation = hasOp.GetOperation()
+	} else if un, ok := v.(unwrapper); ok {
+		return Operation(un.Unwrap())
 	}
 	return operation
 }
@@ -84,7 +86,7 @@ func (e OpErrCode) GetClientData() interface{} {
 var _ ErrorCode = (*OpErrCode)(nil)     // assert implements interface
 var _ HasClientData = (*OpErrCode)(nil) // assert implements interface
 var _ HasOperation = (*OpErrCode)(nil)  // assert implements interface
-var _ unwrapper = (*OpErrCode)(nil)        // assert implements interface
+var _ unwrapper = (*OpErrCode)(nil)     // assert implements interface
 
 // AddOp is constructed by Op. It allows method chaining with AddTo.
 type AddOp func(ErrorCode) OpErrCode
@@ -101,7 +103,6 @@ func (addOp AddOp) AddTo(err ErrorCode) OpErrCode {
 //	if start < obstable && obstacle < end  {
 //		return op.AddTo(PathBlocked{start, end, obstacle})
 //	}
-//
 func Op(operation string) AddOp {
 	return func(err ErrorCode) OpErrCode {
 		if err == nil {
