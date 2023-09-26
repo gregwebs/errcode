@@ -1,2 +1,9 @@
 #!/usr/bin/env bash
-exec go test . ./grpc
+
+go test .
+pushd grpc
+go test .
+popd
+pushd goa
+go test .
+popd

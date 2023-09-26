@@ -1,3 +1,9 @@
 #!/usr/bin/env bash
 
-GO111MODULE=on exec go build . ./grpc
+go build .
+pushd grpc
+go build .
+popd
+pushd goa
+go build .
+popd
