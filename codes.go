@@ -63,7 +63,68 @@ var (
 	ForbiddenCode = AuthCode.Child("auth.forbidden").SetHTTP(http.StatusForbidden)
 
 	UnprocessableEntityCode = StateCode.Child("state.unprocessable").SetHTTP(http.StatusUnprocessableEntity)
+
+	// TimeoutCode represents a timed out connection
+	TimeoutCode = NewCode("timeout")
+	TimeoutGatewayCode = TimeoutCode.Child("timeout.gateway").SetHTTP(http.StatusGatewayTimeout)
+	TimeoutRequestCode = TimeoutCode.Child("timeout.request").SetHTTP(http.StatusRequestTimeout)
 )
+
+
+// CodedError is a convenience to attach a code to an error and already satisfy the ErrorCode interface.
+// If the error is a struct, that struct will get preseneted as data to the client.
+//
+// To override the http code or the data representation or just for clearer documentation,
+// you are encouraged to wrap CodeError with your own struct that inherits it.
+// Look at the implementation of invalidInput, InternalErr, and notFound.
+type CodedError struct {
+	GetCode Code
+	Err     error
+}
+
+// NewCodedError is for constructing broad error kinds (e.g. those representing HTTP codes)
+// Which could have many different underlying go errors.
+// Eventually you may want to give your go errors more specific codes.
+// The second argument is the broad code.
+//
+// If the error given is already an ErrorCode,
+// that will be used as the code instead of the second argument.
+func NewCodedError(err error, code Code) CodedError {
+	if err == nil {
+		panic("NewCodedError error is nil")
+	}
+	if errcode, ok := err.(ErrorCode); ok {
+		code = errcode.Code()
+	}
+	return CodedError{GetCode: code, Err: err}
+}
+
+var _ ErrorCode = (*CodedError)(nil)     // assert implements interface
+var _ HasClientData = (*CodedError)(nil) // assert implements interface
+var _ unwrapper = (*CodedError)(nil)        // assert implements interface
+
+func (e CodedError) Error() string {
+	return e.Err.Error()
+}
+
+// Unwrap satisfies the errors package Unwrwap function.
+func (e CodedError) Unwrap() error {
+	return e.Err
+}
+
+// Code returns the GetCode field
+func (e CodedError) Code() Code {
+	return e.GetCode
+}
+
+// GetClientData returns the underlying Err field.
+func (e CodedError) GetClientData() interface{} {
+	if errCode, ok := e.Err.(ErrorCode); ok {
+		return ClientData(errCode)
+	}
+	return e.Err
+}
+
 
 // invalidInputErr gives the code InvalidInputCode.
 type invalidInputErr struct{ CodedError }
@@ -224,57 +285,22 @@ func NewAlreadyExistsErr(err error) AlreadyExistsErr {
 	return AlreadyExistsErr{NewCodedError(err, AlreadyExistsCode)}
 }
 
+// TimeoutGatewayErr gives the code TimeoutGatewayCode
+type TimeoutGatewayErr struct{ CodedError }
 
-// CodedError is a convenience to attach a code to an error and already satisfy the ErrorCode interface.
-// If the error is a struct, that struct will get preseneted as data to the client.
-//
-// To override the http code or the data representation or just for clearer documentation,
-// you are encouraged to wrap CodeError with your own struct that inherits it.
-// Look at the implementation of invalidInput, InternalErr, and notFound.
-type CodedError struct {
-	GetCode Code
-	Err     error
+// NewTimeoutGatewayErr creates a TimeoutGatewayErr from an err.
+// If the error is already an ErrorCode it will use that code.
+// Otherwise it will use TimeoutGatewayErr which gives HTTP 504.
+func NewTimeoutGatewayErr(err error) TimeoutGatewayErr {
+	return TimeoutGatewayErr{NewCodedError(err, TimeoutGatewayCode)}
 }
 
-// NewCodedError is for constructing broad error kinds (e.g. those representing HTTP codes)
-// Which could have many different underlying go errors.
-// Eventually you may want to give your go errors more specific codes.
-// The second argument is the broad code.
-//
-// If the error given is already an ErrorCode,
-// that will be used as the code instead of the second argument.
-func NewCodedError(err error, code Code) CodedError {
-	if err == nil {
-		panic("NewCodedError error is nil")
-	}
-	if errcode, ok := err.(ErrorCode); ok {
-		code = errcode.Code()
-	}
-	return CodedError{GetCode: code, Err: err}
-}
+// TimeoutRequestErr gives the code TimeoutRequestCode
+type TimeoutRequestErr struct{ CodedError }
 
-var _ ErrorCode = (*CodedError)(nil)     // assert implements interface
-var _ HasClientData = (*CodedError)(nil) // assert implements interface
-var _ unwrapper = (*CodedError)(nil)        // assert implements interface
-
-func (e CodedError) Error() string {
-	return e.Err.Error()
-}
-
-// Unwrap satisfies the errors package Unwrwap function.
-func (e CodedError) Unwrap() error {
-	return e.Err
-}
-
-// Code returns the GetCode field
-func (e CodedError) Code() Code {
-	return e.GetCode
-}
-
-// GetClientData returns the underlying Err field.
-func (e CodedError) GetClientData() interface{} {
-	if errCode, ok := e.Err.(ErrorCode); ok {
-		return ClientData(errCode)
-	}
-	return e.Err
+// NewTimeoutRequestErr creates a TimeoutRequestErr from an err.
+// If the error is already an ErrorCode it will use that code.
+// Otherwise it will use TimeoutRequestErr which gives HTTP 408.
+func NewTimeoutRequestErr(err error) TimeoutRequestErr {
+	return TimeoutRequestErr{NewCodedError(err, TimeoutRequestCode)}
 }
