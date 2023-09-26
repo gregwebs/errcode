@@ -3,8 +3,8 @@ github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg
 github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
-github.com/gregwebs/errcode v0.10.2 h1:X4ObfGEpIuVmZWopk8TI1GIJ3+AnCXZK9imRr49hxtw=
-github.com/gregwebs/errcode v0.10.2/go.mod h1:Ja1/bOFYx5AC5JOuzfEB/nwHU0R06/2GkadGDcIWEfQ=
+github.com/gregwebs/errcode v0.11.0 h1:LryRBQg6BnqJhPPf5mDLEhLkYLx3mZyRE6Z5QT8djQI=
+github.com/gregwebs/errcode v0.11.0/go.mod h1:9hGdc/kIviyBxF9dq0APXLfaDq2IpYg+Wt4kCbk0cQI=
 github.com/gregwebs/errors v1.0.0 h1:Ov7HzBs79i7TcqQnfxyxLT8gttpTzGT3cDq70J8zkpE=
 github.com/gregwebs/errors v1.0.0/go.mod h1:hUKQdGWTRTHMeAXJudXmN/BMLe+L51MG+OnRz72ZeBc=
 golang.org/x/net v0.12.0 h1:cfawfvKITfUsFCeJIHJrbSxpeu/E81khclypR0GVT50=
