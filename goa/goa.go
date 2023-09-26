@@ -26,7 +26,7 @@ func (ec ErrorCodeGoa) StatusCode() int {
 	httpCode := errcode.HTTPCode(ec.Code())
 	if httpCode == nil {
 		slog.Error("no HTTP Status Code", "code", ec.Code(), "error", ec.Error())
-		return 400
+		return http.StatusBadRequest
 	}
 	return *httpCode
 }
