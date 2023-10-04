@@ -60,7 +60,7 @@ func TestErrorCodeChain(t *testing.T) {
 	annMultiCode := errors.Wrap(multiCode, "multi ann")
 	AssertCodeChain(t, annMultiCode, errcode.ChainContext{Top: annMultiCode, ErrCode: multiCode})
 	multiErr := MultiErrors{Multi: []error{errors.New("ignore"), annMultiCode}}
-	AssertCodeChain(t, multiErr, errcode.ChainContext{Top: multiErr, ErrCode: multiCode})
+	AssertCodeChain(t, multiErr, errcode.ChainContext{Top: multiErr, ErrCode: errcode.ChainContext{Top: annMultiCode, ErrCode: multiCode}})
 	// TODO: vertical composition
 }
 

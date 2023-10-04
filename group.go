@@ -92,36 +92,14 @@ func (e MultiErrCode) GetClientData() interface{} {
 	return ClientData(e.ErrCode)
 }
 
-// CodeChain resolves an error chain down to a chain of just error codes
-// Any ErrorGroups found are converted to a MultiErrCode.
-// Passed over error inforation is retained using ChainContext.
-// If a code was overidden in the chain, it will show up as a MultiErrCode.
-func CodeChain(err error) ErrorCode {
-	var code ErrorCode
-	currentErr := err
-	chainErrCode := func(errcode ErrorCode) {
-		if errcode.(error) != currentErr {
-			if chained, ok := errcode.(ChainContext); ok {
-				// Perhaps this is a hack because we should be passing the context to recursive CodeChain calls
-				chained.Top = currentErr
-				errcode = chained
-			} else {
-				errcode = ChainContext{currentErr, errcode}
-			}
-		}
-		if code == nil {
-			code = errcode
-		} else {
-			code = MultiErrCode{code, []error{code.(error), errcode.(error)}}
-		}
-		currentErr = errcode.(error)
-	}
-
-	for err != nil {
-		if errcode, ok := err.(ErrorCode); ok {
-			if code == nil || code.Code() != errcode.Code() {
-				chainErrCode(errcode)
-			}
+// CodeChain resolves wrapped errors down to the first ErrorCode.
+// An error that is an ErrorGroup with multiple codes will have its error codes combined to a MultiErrCode.
+// If the given error is not an ErrorCode, a ContextChain will be returned with Top set to the given error.
+// This allows the return object to maintain a full Error() message.
+func CodeChain(errInput error) ErrorCode {
+	checkError := func(err error) ErrorCode {
+		if errCode, ok := err.(ErrorCode); ok {
+			return errCode
 		} else if eg, ok := err.(errors.ErrorGroup); ok {
 			group := []ErrorCode{}
 			for _, errItem := range eg.Errors() {
@@ -130,19 +108,30 @@ func CodeChain(err error) ErrorCode {
 				}
 			}
 			if len(group) > 0 {
-				var codeGroup ErrorCode
 				if len(group) == 1 {
-					codeGroup = group[0]
+					return group[0]
 				} else {
-					codeGroup = Combine(group[0], group[1:]...)
+					return Combine(group[0], group[1:]...)
 				}
-				chainErrCode(codeGroup)
 			}
+		}
+		return nil
+	}
+
+	// In this case there is no need for ChainContext
+	if errCode, ok := errInput.(ErrorCode); ok {
+		return errCode
+	}
+
+	err := errInput
+	for err != nil {
+		if errCode := checkError(err); errCode != nil {
+			return ChainContext{errInput, errCode}
 		}
 		err = errors.Unwrap(err)
 	}
 
-	return code
+	return nil
 }
 
 // ChainContext is returned by ErrorCodeChain
