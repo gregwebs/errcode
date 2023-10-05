@@ -273,7 +273,7 @@ var _ errcode.HasOperation = (*OpErrorEmbed)(nil) // assert implements interface
 
 type UserMsgError struct{ MinimalError }
 
-func (e UserMsgError) UserMsg() string { return "user" }
+func (e UserMsgError) GetUserMsg() string { return "user" }
 
 type UserMsgErrorEmbed struct {
 	errcode.EmbedUserMsg
@@ -316,6 +316,17 @@ func TestOpErrorCode(t *testing.T) {
 	OpEquals(t, errcode.OpErrCode{Operation: "opcode", Err: has}, "opcode")
 }
 
+func assertPanics[T any](t *testing.T, f func() T) {
+	var res T
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("testPanic: did not panic, got: %v", res)
+		}
+	}()
+
+	res = f()
+}
+
 func TestUserMsg(t *testing.T) {
 	AssertUserMsg(t, "foo", "")
 	ue := UserMsgError{}
@@ -328,10 +339,12 @@ func TestUserMsg(t *testing.T) {
 	UserMsgEquals(t, UserMsgErrorEmbed{}, "")
 	UserMsgEquals(t, UserMsgErrorEmbed{EmbedUserMsg: errcode.EmbedUserMsg{Msg: "field"}}, "field")
 
-	umEmpty := errcode.NewUserMsg("")
-	um := errcode.NewUserMsg("modify")
-	UserMsgEquals(t, umEmpty.AddTo(MinimalError{}), "")
+	um := errcode.UserMsg("modify")
 	UserMsgEquals(t, um.AddTo(MinimalError{}), "modify")
+
+	umEmpty := errcode.UserMsg("")
+	assertPanics(t, func() errcode.ErrorCode { return umEmpty.AddTo(MinimalError{}) })
+	assertPanics(t, func() errcode.ErrorCode { return umEmpty.AddTo(nil) })
 
 	UserMsgEquals(t, ErrorWrapper{Err: ue}, "user")
 	UserMsgEquals(t, ErrorWrapper{Err: UserMsgErrorEmbed{EmbedUserMsg: errcode.EmbedUserMsg{Msg: "field"}}}, "field")
@@ -390,7 +403,7 @@ func ClientDataEquals(t *testing.T, code errcode.ErrorCode, data interface{}, co
 	t.Helper()
 
 	jsonEquals(t, "ClientData", data, errcode.ClientData(code))
-	msg := errcode.UserMsg(code)
+	msg := errcode.GetUserMsg(code)
 	if msg == "" {
 		msg = code.Error()
 	}
@@ -428,7 +441,7 @@ func OpEquals(t *testing.T, code errcode.ErrorCode, op string) {
 
 func UserMsgEquals(t *testing.T, code errcode.ErrorCode, msg string) {
 	t.Helper()
-	msgGot := errcode.UserMsg(code)
+	msgGot := errcode.GetUserMsg(code)
 	if msgGot != msg {
 		t.Errorf("\nUser msg expected: %#v\n but got: %#v", msg, msgGot)
 	}
@@ -444,7 +457,7 @@ func AssertOperation(t *testing.T, v interface{}, op string) {
 
 func AssertUserMsg(t *testing.T, v interface{}, msg string) {
 	t.Helper()
-	msgGot := errcode.UserMsg(v)
+	msgGot := errcode.GetUserMsg(v)
 	if msgGot != msg {
 		t.Errorf("\nUser msg expected: %#v\n but got: %#v", msg, msgGot)
 	}

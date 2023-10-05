@@ -232,7 +232,7 @@ func NewJSONFormat(errCode ErrorCode) JSONFormat {
 		stack = StackTrace(errCode)
 	}
 
-	msg := UserMsg(errCode)
+	msg := GetUserMsg(errCode)
 	if msg == "" {
 		msg = errCode.Error()
 	}

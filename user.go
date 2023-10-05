@@ -13,41 +13,44 @@
 
 package errcode
 
-// HasUserMsg is an interface to retrieve a user message.
-// The goal is to be able to show an error message that is either tailored for end users or to hide extended error messages from the client.
+// HasUserMsg retrieves a user message.
+// The goal is to be able to show an error message that is tailored for end users and to hide extended error messages from the user.
 //
-// GetUserMsg is defined, but generally the operation should be retrieved with UserMsg().
-// UserMsg() will check if a HasUserMsg interface exists.
-// As an alternative to defining this interface
-// you can use an existing wrapper (UsserMsgErrCode via NewUserMsg) or embedding (EmbedUserMsg) that has already defined it.
+// The user message should be retrieved with [UserMsg].
+// [UserMsg] will check if a HasUserMsg interface exists.
+// As an alternative to defining this interface yourself,
+// you can use an existing struct that has already defined it.
+// There is a wrapper struct [UsserMsgErrCode] via [NewUserMsg] or [WithUserMsg]
+// and am embedded struct [EmbedUserMsg].
 type HasUserMsg interface {
-	UserMsg() string
+	GetUserMsg() string
 }
 
-// UserMsg will return an user message string if it exists.
-// It checks recursively for the HasUserMsg interface.
-// Otherwise it will return the zero value (empty) string.
-func UserMsg(v interface{}) string {
+// GetUserMsg will return a user message string if it exists.
+// It checks recursively for the [HasUserMsg] interface.
+// This function stops when it finds a user message: it will not combine them.
+// If a user message is not found, it will return the zero value (empty) string.
+func GetUserMsg(v interface{}) string {
 	var msg string
 	if hasMsg, ok := v.(HasUserMsg); ok {
-		msg = hasMsg.UserMsg()
+		msg = hasMsg.GetUserMsg()
 	} else if un, ok := v.(unwrapper); ok {
-		return UserMsg(un.Unwrap())
+		return GetUserMsg(un.Unwrap())
 	}
 	return msg
 }
 
 // EmbedUserMsg is designed to be embedded into your existing error structs.
-// It provides the HasOperation interface already, which can reduce your boilerplate.
+// It provides the HasUserMsg interface already, which can reduce your boilerplate.
 type EmbedUserMsg struct{ Msg string }
 
-// UserMsg satisfies the HasUserMsg interface
-func (e EmbedUserMsg) UserMsg() string {
+// GetUserMsg satisfies the HasUserMsg interface
+func (e EmbedUserMsg) GetUserMsg() string {
 	return e.Msg
 }
 
 // UserMsgErrCode is an ErrorCode with a Msg field attached.
-// This can be conveniently constructed with Op() and AddTo() to record the operation information for the error.
+// This can be conveniently constructed with NewUserMsg and AddTo or WithUserMsg
 // However, it isn't required to be used, see the HasUserMsg documentation for alternatives.
 type UserMsgErrCode struct {
 	Msg string
@@ -59,13 +62,13 @@ func (e UserMsgErrCode) Unwrap() error {
 	return e.Err
 }
 
-// Error prefixes the operation to the underlying Err Error.
+// Error prefixes the user message to the underlying Err Error.
 func (e UserMsgErrCode) Error() string {
 	return e.Msg + ": " + e.Err.Error()
 }
 
-// GetOperation satisfies the HasOperation interface.
-func (e UserMsgErrCode) UserMsg() string {
+// GetUserMsg satisfies the [HasUserMsg] interface.
+func (e UserMsgErrCode) GetUserMsg() string {
 	return e.Msg
 }
 
@@ -84,26 +87,35 @@ var _ HasClientData = (*UserMsgErrCode)(nil) // assert implements interface
 var _ HasUserMsg = (*UserMsgErrCode)(nil)    // assert implements interface
 var _ unwrapper = (*UserMsgErrCode)(nil)     // assert implements interface
 
-// AddUserMsg is constructed by AddUserMsg. It allows method chaining with AddTo.
+// AddUserMsg is constructed by UserMsg. It allows method chaining with AddTo.
 type AddUserMsg func(ErrorCode) UserMsgErrCode
 
-// AddTo adds the operation from Op to the ErrorCode
+// AddTo adds the user message from UserMsg to the given ErrorCode
 func (add AddUserMsg) AddTo(err ErrorCode) UserMsgErrCode {
 	return add(err)
 }
 
-// Op adds an operation to an ErrorCode with AddTo.
-// This converts the error to the type OpErrCode.
+// UserMsg adds a user message to an ErrorCode with AddTo.
+// This converts the error to the type AddUserMsg.
 //
-//	userMsg := errcode.NewUserMsg("dont do that")
+//	userMsg := errcode.UserMsg("dont do that")
 //	if start < obstable && obstacle < end  {
 //		return userMsg.AddTo(PathBlocked{start, end, obstacle})
 //	}
-func NewUserMsg(msg string) AddUserMsg {
+func UserMsg(msg string) AddUserMsg {
 	return func(err ErrorCode) UserMsgErrCode {
-		if err == nil {
-			panic("UserMsg error is nil")
-		}
-		return UserMsgErrCode{Msg: msg, Err: err}
+		return WithUserMsg(msg, err)
 	}
+}
+
+// WithUserMsg creates a UserMsgErrCode
+// Panics if msg is empty or err is nil.
+func WithUserMsg(msg string, err ErrorCode) UserMsgErrCode {
+	if err == nil {
+		panic("WithUserMsg ErrorCode is nil")
+	}
+	if msg == "" {
+		panic("WithUserMsg msg is empty")
+	}
+	return UserMsgErrCode{Msg: msg, Err: err}
 }
