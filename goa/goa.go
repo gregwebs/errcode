@@ -17,7 +17,7 @@ type ErrorCodeGoa struct {
 }
 
 // fulfill GOA expectation
-func (ec *ErrorCodeGoa) GoaErrorName() string {
+func (ec ErrorCodeGoa) GoaErrorName() string {
 	return string(ec.errorCode.Code().CodeStr())
 }
 
@@ -65,8 +65,8 @@ func ErrorCodeToGoa(errCode errcode.ErrorCode) ErrorCodeGoa {
 
 var codeCache map[string]errcode.Code
 
-func goaErrorResponseToErrorCode(goaErr *goalib.ServiceError) errcode.Code {
-	errResp := goahttp.ErrorResponse{
+func serviceErrorToHttpErr(goaErr *goalib.ServiceError) *goahttp.ErrorResponse {
+	return &goahttp.ErrorResponse{
 		Name:      goaErr.Name,
 		ID:        goaErr.ID,
 		Message:   goaErr.Message,
@@ -74,8 +74,10 @@ func goaErrorResponseToErrorCode(goaErr *goalib.ServiceError) errcode.Code {
 		Temporary: goaErr.Temporary,
 		Fault:     goaErr.Fault,
 	}
+}
 
-	switch errResp.Name {
+func serviceErrorToCode(goaErr *goalib.ServiceError) errcode.Code {
+	switch goaErr.Name {
 	case "missing_payload":
 		return errcode.InvalidInputCode
 	case "decode_payload":
@@ -95,8 +97,9 @@ func goaErrorResponseToErrorCode(goaErr *goalib.ServiceError) errcode.Code {
 	case "invalid_length":
 		return errcode.InvalidInputCode
 	default:
+		statusCode := serviceErrorToHttpErr(goaErr).StatusCode()
 		// GOA only gives the following HTTP codes
-		switch errResp.StatusCode() {
+		switch statusCode {
 		case http.StatusGatewayTimeout:
 			return errcode.TimeoutGatewayCode
 		case http.StatusRequestTimeout:
@@ -108,14 +111,13 @@ func goaErrorResponseToErrorCode(goaErr *goalib.ServiceError) errcode.Code {
 		case http.StatusBadRequest:
 			return errcode.InvalidInputCode
 		}
-		slog.Error("unexpected status code", "httpCode", errResp.StatusCode())
 		if codeCache == nil {
 			codeCache = make(map[string]errcode.Code)
 		}
-		code, okCode := codeCache[errResp.Name]
+		code, okCode := codeCache[goaErr.Name]
 		if !okCode {
-			code = errcode.NewCode(errcode.CodeStr(errResp.Name)).SetHTTP(errResp.StatusCode())
-			codeCache[errResp.Name] = code
+			code = errcode.NewCode(errcode.CodeStr(goaErr.Name)).SetHTTP(statusCode)
+			codeCache[goaErr.Name] = code
 		}
 		return code
 	}
@@ -133,10 +135,14 @@ func ErrorResponse(err error) goahttp.Statuser {
 		if _, ok := err.(*goalib.ServiceError); !ok {
 			goaErr.Message = err.Error()
 		}
-		code := goaErrorResponseToErrorCode(goaErr)
-		return ErrorCodeToGoa(errcode.NewCodedError(err, code))
+		return ServiceErrorToErrorCode(goaErr)
 	}
 
 	// Use Goa default for all other error types
 	return ErrorCodeToGoa(errcode.NewInternalErr(err))
+}
+
+func ServiceErrorToErrorCode(err *goalib.ServiceError) ErrorCodeGoa {
+	code := serviceErrorToCode(err)
+	return ErrorCodeToGoa(errcode.NewCodedError(err, code))
 }
