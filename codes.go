@@ -38,7 +38,7 @@ var (
 
 	// AlreadyExistsCode indicates an attempt to create an entity failed because it already exists.
 	// This is mapped to HTTP 422. 409 is sometimes used in these cases, but 409 is supposed to be for re-submittable errors.
-  // It would also be possible to use a 400
+	// It would also be possible to use a 400
 	AlreadyExistsCode = StateCode.Child("state.exists").SetHTTP(http.StatusUnprocessableEntity)
 
 	// OutOfRangeCode indicates an operation was attempted past a valid range.
@@ -65,11 +65,10 @@ var (
 	UnprocessableEntityCode = StateCode.Child("state.unprocessable").SetHTTP(http.StatusUnprocessableEntity)
 
 	// TimeoutCode represents a timed out connection
-	TimeoutCode = NewCode("timeout")
+	TimeoutCode        = NewCode("timeout")
 	TimeoutGatewayCode = TimeoutCode.Child("timeout.gateway").SetHTTP(http.StatusGatewayTimeout)
 	TimeoutRequestCode = TimeoutCode.Child("timeout.request").SetHTTP(http.StatusRequestTimeout)
 )
-
 
 // CodedError is a convenience to attach a code to an error and already satisfy the ErrorCode interface.
 // If the error is a struct, that struct will get preseneted as data to the client.
@@ -101,7 +100,7 @@ func NewCodedError(err error, code Code) CodedError {
 
 var _ ErrorCode = (*CodedError)(nil)     // assert implements interface
 var _ HasClientData = (*CodedError)(nil) // assert implements interface
-var _ unwrapper = (*CodedError)(nil)        // assert implements interface
+var _ unwrapper = (*CodedError)(nil)     // assert implements interface
 
 func (e CodedError) Error() string {
 	return e.Err.Error()
@@ -119,12 +118,14 @@ func (e CodedError) Code() Code {
 
 // GetClientData returns the underlying Err field.
 func (e CodedError) GetClientData() interface{} {
+	if cd, ok := e.Err.(HasClientData); ok {
+		return cd.GetClientData()
+	}
 	if errCode, ok := e.Err.(ErrorCode); ok {
 		return ClientData(errCode)
 	}
 	return e.Err
 }
-
 
 // invalidInputErr gives the code InvalidInputCode.
 type invalidInputErr struct{ CodedError }
@@ -138,7 +139,7 @@ func NewInvalidInputErr(err error) ErrorCode {
 
 var _ ErrorCode = (*invalidInputErr)(nil)     // assert implements interface
 var _ HasClientData = (*invalidInputErr)(nil) // assert implements interface
-var _ unwrapper = (*invalidInputErr)(nil)        // assert implements interface
+var _ unwrapper = (*invalidInputErr)(nil)     // assert implements interface
 
 // badReqeustErr gives the code BadRequestErr.
 type BadRequestErr struct{ CodedError }
@@ -166,7 +167,7 @@ func NewInternalErr(err error) InternalErr {
 
 var _ ErrorCode = (*InternalErr)(nil)     // assert implements interface
 var _ HasClientData = (*InternalErr)(nil) // assert implements interface
-var _ unwrapper = (*InternalErr)(nil)        // assert implements interface
+var _ unwrapper = (*InternalErr)(nil)     // assert implements interface
 
 // makeInternalStackCode builds a function for making an an internal error with a stack trace.
 func makeInternalStackCode(defaultCode Code) func(error) StackCode {
@@ -226,7 +227,7 @@ func NewNotFoundErr(err error) NotFoundErr {
 
 var _ ErrorCode = (*NotFoundErr)(nil)     // assert implements interface
 var _ HasClientData = (*NotFoundErr)(nil) // assert implements interface
-var _ unwrapper = (*NotFoundErr)(nil)        // assert implements interface
+var _ unwrapper = (*NotFoundErr)(nil)     // assert implements interface
 
 // NotAuthenticatedErr gives the code NotAuthenticatedCode.
 type NotAuthenticatedErr struct{ CodedError }
@@ -240,7 +241,7 @@ func NewNotAuthenticatedErr(err error) NotAuthenticatedErr {
 
 var _ ErrorCode = (*NotAuthenticatedErr)(nil)     // assert implements interface
 var _ HasClientData = (*NotAuthenticatedErr)(nil) // assert implements interface
-var _ unwrapper = (*NotAuthenticatedErr)(nil)        // assert implements interface
+var _ unwrapper = (*NotAuthenticatedErr)(nil)     // assert implements interface
 
 // ForbiddenErr gives the code ForbiddenCode.
 type ForbiddenErr struct{ CodedError }
@@ -254,7 +255,7 @@ func NewForbiddenErr(err error) ForbiddenErr {
 
 var _ ErrorCode = (*ForbiddenErr)(nil)     // assert implements interface
 var _ HasClientData = (*ForbiddenErr)(nil) // assert implements interface
-var _ unwrapper = (*ForbiddenErr)(nil)        // assert implements interface
+var _ unwrapper = (*ForbiddenErr)(nil)     // assert implements interface
 
 // UnprocessableErr gives the code UnprocessibleCode.
 type UnprocessableErr struct{ CodedError }
@@ -262,7 +263,7 @@ type UnprocessableErr struct{ CodedError }
 // NewUnprocessableErr creates an UnprocessableErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use UnprocessableEntityCode which gives HTTP 422.
-func NewUnprocessableErr (err error) UnprocessableErr {
+func NewUnprocessableErr(err error) UnprocessableErr {
 	return UnprocessableErr{NewCodedError(err, UnprocessableEntityCode)}
 }
 
@@ -272,7 +273,7 @@ type NotAcceptableErr struct{ CodedError }
 // NewUnprocessableErr creates an UnprocessableErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use NotAcceptableCode which gives HTTP 406.
-func NewNotAcceptableErr (err error) NotAcceptableErr {
+func NewNotAcceptableErr(err error) NotAcceptableErr {
 	return NotAcceptableErr{NewCodedError(err, NotAcceptableCode)}
 }
 
