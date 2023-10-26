@@ -21,9 +21,15 @@ package errcode
 // As an alternative to defining this interface yourself,
 // you can use an existing struct that has already defined it.
 // There is a wrapper struct [UsserMsgErrCode] via [NewUserMsg] or [WithUserMsg]
-// and am embedded struct [EmbedUserMsg].
+// and an embedded struct [EmbedUserMsg].
 type HasUserMsg interface {
 	GetUserMsg() string
+}
+
+// UserCode is used to ensure that an ErrorCode has a user message
+type UserCode interface {
+	ErrorCode
+	HasUserMsg
 }
 
 // GetUserMsg will return a user message string if it exists.
@@ -51,7 +57,7 @@ func (e EmbedUserMsg) GetUserMsg() string {
 
 // UserMsgErrCode is an ErrorCode with a Msg field attached.
 // This can be conveniently constructed with NewUserMsg and AddTo or WithUserMsg
-// However, it isn't required to be used, see the HasUserMsg documentation for alternatives.
+// see the HasUserMsg documentation for alternatives.
 type UserMsgErrCode struct {
 	Msg string
 	Err ErrorCode
