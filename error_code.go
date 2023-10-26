@@ -45,8 +45,6 @@ package errcode
 import (
 	"fmt"
 	"strings"
-
-	"github.com/gregwebs/errors"
 )
 
 // CodeStr is the name of the error code.
@@ -193,12 +191,11 @@ func ClientData(errCode ErrorCode) interface{} {
 // * Stack is a stack trace. This is only given for internal errors.
 // * Others gives other errors that occurred (perhaps due to parallel requests).
 type JSONFormat struct {
-	Code      CodeStr           `json:"code"`
-	Msg       string            `json:"msg"`
-	Data      interface{}       `json:"data"`
-	Operation string            `json:"operation,omitempty"`
-	Stack     errors.StackTrace `json:"stack,omitempty"`
-	Others    []JSONFormat      `json:"others,omitempty"`
+	Code      CodeStr      `json:"code"`
+	Msg       string       `json:"msg"`
+	Data      interface{}  `json:"data"`
+	Operation string       `json:"operation,omitempty"`
+	Others    []JSONFormat `json:"others,omitempty"`
 }
 
 // OperationClientData gives the results of both the ClientData and Operation functions.
@@ -227,11 +224,6 @@ func NewJSONFormat(errCode ErrorCode) JSONFormat {
 
 	op, data := OperationClientData(errCode)
 
-	var stack errors.StackTrace
-	if errCode.Code().IsAncestor(InternalCode) {
-		stack = StackTrace(errCode)
-	}
-
 	msg := GetUserMsg(errCode)
 	if msg == "" {
 		msg = errCode.Error()
@@ -242,7 +234,6 @@ func NewJSONFormat(errCode ErrorCode) JSONFormat {
 		Msg:       msg,
 		Code:      errCode.Code().CodeStr(),
 		Operation: op,
-		Stack:     stack,
 		Others:    others,
 	}
 }

@@ -393,12 +393,8 @@ func ErrorEquals(t *testing.T, err error, msg string) {
 
 func ClientDataEquals(t *testing.T, code errcode.ErrorCode, data interface{}, codeStrs ...errcode.CodeStr) {
 	codeStr := codeString
-	var stack errors.StackTrace
 	if len(codeStrs) > 0 {
 		codeStr = codeStrs[0]
-		if code.Code().IsAncestor(errcode.InternalCode) {
-			stack = errcode.StackTrace(code)
-		}
 	}
 	t.Helper()
 
@@ -413,7 +409,6 @@ func ClientDataEquals(t *testing.T, code errcode.ErrorCode, data interface{}, co
 		Msg:       msg,
 		Code:      codeStr,
 		Operation: errcode.Operation(data),
-		Stack:     stack,
 	}
 	newJSON := errcode.NewJSONFormat(code)
 	jsonEquals(t, "JSONFormat", jsonExpected, newJSON)
