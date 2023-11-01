@@ -44,7 +44,19 @@ func (ec ErrorCodeGoa) Unwrap() error {
 }
 
 func AsErrorCodeGoa(err error) *ErrorCodeGoa {
+	if ecg, ok := err.(ErrorCodeGoa); ok {
+		return &ecg
+	}
+	if ecg, ok := err.(*ErrorCodeGoa); ok {
+		return ecg
+	}
 	if errCode := errcode.CodeChain(err); errCode != nil {
+		ecg := ErrorCodeGoa{}
+		if ok := errors.As(err, &ecg); ok {
+			ecgDup := ecg
+			ecgDup.err = err
+			return &ecgDup
+		}
 		return &ErrorCodeGoa{
 			errorCode:  errCode,
 			err:        err,
@@ -123,7 +135,7 @@ func serviceErrorToCode(goaErr *goalib.ServiceError) errcode.Code {
 	}
 }
 
-func ErrorResponse(err error) goahttp.Statuser {
+func ErrorResponse(err error) ErrorCodeGoa {
 	if ecg := AsErrorCodeGoa(err); ecg != nil {
 		return *ecg
 	}
