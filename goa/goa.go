@@ -110,6 +110,7 @@ func serviceErrorToCode(goaErr *goalib.ServiceError) errcode.Code {
 		return errcode.InvalidInputCode
 	default:
 		statusCode := serviceErrorToHttpErr(goaErr).StatusCode()
+		var parentCode *errcode.Code
 		// GOA only gives the following HTTP codes
 		switch statusCode {
 		case http.StatusGatewayTimeout:
@@ -121,14 +122,19 @@ func serviceErrorToCode(goaErr *goalib.ServiceError) errcode.Code {
 		case http.StatusServiceUnavailable:
 			return errcode.UnavailableCode
 		case http.StatusBadRequest:
-			return errcode.InvalidInputCode
+			parentCode = &errcode.InvalidInputCode
 		}
 		if codeCache == nil {
 			codeCache = make(map[string]errcode.Code)
 		}
 		code, okCode := codeCache[goaErr.Name]
 		if !okCode {
-			code = errcode.NewCode(errcode.CodeStr(goaErr.Name)).SetHTTP(statusCode)
+			codeStr := errcode.CodeStr(goaErr.Name)
+			code = errcode.NewCode(codeStr)
+			if parentCode != nil {
+				code = parentCode.Child(codeStr)
+			}
+			code.SetHTTP(statusCode)
 			codeCache[goaErr.Name] = code
 		}
 		return code
