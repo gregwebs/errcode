@@ -7,6 +7,7 @@ import (
 	"github.com/gregwebs/errcode"
 	"github.com/gregwebs/errcode/goa"
 	"github.com/gregwebs/errors"
+	goalib "goa.design/goa/v3/pkg"
 )
 
 func TestErrorResponse(t *testing.T) {
@@ -26,5 +27,22 @@ func TestErrorResponse(t *testing.T) {
 	resWrap := goa.ErrorResponse(wrapped)
 	if wrapped.Error() != resWrap.Error() {
 		t.Errorf("Expected %T '%v' as goa error, got %T '%v'", wrapped, wrapped, resWrap, resWrap)
+	}
+}
+
+func TestServiceErrorToErrorCode(t *testing.T) {
+	err := errors.New("test err")
+	svcErr := goalib.NewServiceError(err, "Name", false, false, false)
+	got := goa.ServiceErrorToErrorCode(svcErr).Code().CodeStr()
+	expected := "input.Name"
+	if expected != string(got) {
+		t.Errorf("expected %s but got %s", expected, got)
+	}
+
+	svcErr = goalib.NewServiceError(err, "Name", true, false, false)
+	got = goa.ServiceErrorToErrorCode(svcErr).Code().CodeStr()
+	expected = "timeout.request"
+	if expected != string(got) {
+		t.Errorf("expected %s but got %s", expected, got)
 	}
 }
