@@ -51,12 +51,6 @@ func AsErrorCodeGoa(err error) *ErrorCodeGoa {
 		return ecg
 	}
 	if errCode := errcode.CodeChain(err); errCode != nil {
-		ecg := ErrorCodeGoa{}
-		if ok := errors.As(err, &ecg); ok {
-			ecgDup := ecg
-			ecgDup.err = err
-			return &ecgDup
-		}
 		return &ErrorCodeGoa{
 			errorCode:  errCode,
 			err:        err,

@@ -33,10 +33,15 @@ func TestErrorResponse(t *testing.T) {
 func TestServiceErrorToErrorCode(t *testing.T) {
 	err := errors.New("test err")
 	svcErr := goalib.NewServiceError(err, "Name", false, false, false)
-	got := goa.ServiceErrorToErrorCode(svcErr).Code().CodeStr()
+	gotCode := goa.ServiceErrorToErrorCode(svcErr)
+	got := gotCode.Code().CodeStr()
 	expected := "input.Name"
 	if expected != string(got) {
 		t.Errorf("expected %s but got %s", expected, got)
+	}
+	gotMsg := goa.AsErrorCodeGoa(errcode.WithUserMsg("user", gotCode)).Msg
+	if gotMsg != "user" {
+		t.Errorf("expected user, got %s", gotMsg)
 	}
 
 	svcErr = goalib.NewServiceError(err, "Name", true, false, false)
