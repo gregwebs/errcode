@@ -1,6 +1,7 @@
 package goa
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 )
 
 type ErrorCodeGoa struct {
-	errcode.JSONFormat
 	errorCode errcode.ErrorCode
 	err       error
 }
@@ -43,6 +43,10 @@ func (ec ErrorCodeGoa) Unwrap() error {
 	return ec.err
 }
 
+func (ec ErrorCodeGoa) MarshalJSON() ([]byte, error) {
+	return json.Marshal(errcode.NewJSONFormat(ec.errorCode))
+}
+
 func AsErrorCodeGoa(err error) *ErrorCodeGoa {
 	if ecg, ok := err.(ErrorCodeGoa); ok {
 		return &ecg
@@ -52,9 +56,8 @@ func AsErrorCodeGoa(err error) *ErrorCodeGoa {
 	}
 	if errCode := errcode.CodeChain(err); errCode != nil {
 		return &ErrorCodeGoa{
-			errorCode:  errCode,
-			err:        err,
-			JSONFormat: errcode.NewJSONFormat(errCode),
+			errorCode: errCode,
+			err:       err,
 		}
 	}
 
@@ -63,9 +66,8 @@ func AsErrorCodeGoa(err error) *ErrorCodeGoa {
 
 func ErrorCodeToGoa(errCode errcode.ErrorCode) ErrorCodeGoa {
 	return ErrorCodeGoa{
-		errorCode:  errCode,
-		err:        errCode,
-		JSONFormat: errcode.NewJSONFormat(errCode),
+		errorCode: errCode,
+		err:       errCode,
 	}
 }
 
