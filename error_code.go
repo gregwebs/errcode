@@ -173,11 +173,21 @@ type HasClientData interface {
 // If HasClientData is not defined it will use the given ErrorCode object.
 // Normally this function is used rather than GetClientData.
 func ClientData(errCode ErrorCode) interface{} {
-	var data interface{} = errCode
 	if hasData, ok := errCode.(HasClientData); ok {
-		data = hasData.GetClientData()
+		return hasData.GetClientData()
 	}
-	return data
+	var err error = errCode
+	for {
+		if un, ok := err.(unwrapper); ok {
+			err = un.Unwrap()
+			if hasData, ok := err.(HasClientData); ok {
+				return hasData.GetClientData()
+			}
+		} else {
+			break
+		}
+	}
+	return errCode
 }
 
 // JSONFormat is an opinion on how to serialize an ErrorCode to JSON.
