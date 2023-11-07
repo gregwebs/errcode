@@ -1,6 +1,7 @@
 package goa_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/gregwebs/errcode"
@@ -26,6 +27,14 @@ func TestErrorResponse(t *testing.T) {
 	if wrapped.Error() != resWrap.Error() {
 		t.Errorf("Expected %T '%v' as goa error, got %T '%v'", wrapped, wrapped, resWrap, resWrap)
 	}
+	jsonBytes, err := json.Marshal(resWrap)
+	if err != nil {
+		t.Fatalf("expected json marshal success, got %v", err)
+	}
+	expectedJSON := `{"code":"internal","msg":"wrapped: goa test","data":{}}`
+	if string(jsonBytes) != expectedJSON {
+		t.Fatalf("expected %s, got %s", expectedJSON, string(jsonBytes))
+	}
 }
 
 func TestServiceErrorToErrorCode(t *testing.T) {
@@ -41,6 +50,16 @@ func TestServiceErrorToErrorCode(t *testing.T) {
 	if gotMsg != "user" {
 		t.Errorf("expected user, got %s", gotMsg)
 	}
+	/*
+		jsonBytes, err := json.Marshal(gotCode)
+		if err != nil {
+			t.Fatalf("expected json marshal success, got %v", err)
+		}
+		expectedJSON := `{"code":"input.Name","msg":"test err","data":{"Name":"Name","ID":"cFMCxpn6","Field":null,"Message":"test err","Timeout":false,"Temporary":false,"Fault":false}}`
+		if string(jsonBytes) != expectedJSON {
+			t.Fatalf("expected {}, got %s", string(jsonBytes))
+		}
+	*/
 
 	svcErr = goalib.NewServiceError(err, "Name", true, false, false)
 	got = goa.ServiceErrorToErrorCode(svcErr).Code().CodeStr()
