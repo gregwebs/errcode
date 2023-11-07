@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gregwebs/errcode"
 	goahttp "goa.design/goa/v3/http"
@@ -158,5 +159,70 @@ func ErrorResponse(err error) ErrorCodeGoa {
 
 func ServiceErrorToErrorCode(err *goalib.ServiceError) ErrorCodeGoa {
 	code := serviceErrorToCode(err)
-	return ErrorCodeToGoa(errcode.NewCodedError(err, code))
+	var errorForCode error = err
+
+	// adjust GOA error mesages to be user readable
+	if errcode.GetUserMsg(err) == "" {
+		switch err.Name {
+		case "invalid_pattern":
+			errorForCode = PatternErr{err: err}
+		}
+	}
+	var errCode errcode.ErrorCode = errcode.NewCodedError(errorForCode, code)
+	return ErrorCodeToGoa(errCode)
+}
+
+type PatternErr struct {
+	err *goalib.ServiceError
+}
+
+func (pe PatternErr) Unwrap() error {
+	return pe.err
+}
+
+func (pe PatternErr) Error() string {
+	return pe.err.Error()
+}
+
+func (pe PatternErr) GetUserMsg() string {
+	msg := strings.TrimPrefix(pe.err.Message, "body.")
+	msg = strings.Split(msg, " must match ")[0]
+	if msg != pe.err.Message {
+		msg = msg + " is invalid"
+		return strings.ReplaceAll(msg, "  ", " ")
+	}
+	return ""
+}
+
+func (pe PatternErr) GetClientData() interface{} {
+	var value string
+	valueSplit := strings.Split(pe.err.Message, " but got value ")
+	if len(valueSplit) == 2 {
+		value = valueSplit[1]
+		after, found := strings.CutPrefix(value, `"`)
+		if found {
+			value, _ = strings.CutSuffix(after, `"`)
+		}
+	}
+	var field string
+	if pe.err.Field != nil {
+		field = strings.TrimPrefix(*pe.err.Field, "body.")
+	}
+	return PatternErrClientData{
+		ID:          pe.err.ID,
+		Name:        pe.err.Name,
+		Field:       field,
+		Value:       value,
+		FullMessage: pe.err.Message,
+	}
+}
+
+// var _ errcode.HasClientData = PatternErr{}
+
+type PatternErrClientData struct {
+	ID          string
+	Name        string
+	Field       string
+	Value       string
+	FullMessage string
 }
