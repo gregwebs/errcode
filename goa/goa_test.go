@@ -1,7 +1,6 @@
 package goa_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/gregwebs/errcode"
@@ -18,8 +17,7 @@ func TestErrorResponse(t *testing.T) {
 	ecg := *ecgPtr
 
 	resSame := goa.ErrorResponse(ecg)
-	// lint:ignore deepequalerrors
-	if !reflect.DeepEqual(ecg, resSame) {
+	if ecg != resSame {
 		t.Errorf("Expectd %T '%v' as goa error, got %T '%v'", ecg, ecg, resSame, resSame)
 	}
 
@@ -39,7 +37,7 @@ func TestServiceErrorToErrorCode(t *testing.T) {
 	if expected != string(got) {
 		t.Errorf("expected %s but got %s", expected, got)
 	}
-	gotMsg := goa.AsErrorCodeGoa(errcode.WithUserMsg("user", gotCode)).Msg
+	gotMsg := errcode.GetUserMsg(goa.AsErrorCodeGoa(errcode.WithUserMsg("user", gotCode)))
 	if gotMsg != "user" {
 		t.Errorf("expected user, got %s", gotMsg)
 	}
