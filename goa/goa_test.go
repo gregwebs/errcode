@@ -68,3 +68,23 @@ func TestServiceErrorToErrorCode(t *testing.T) {
 		t.Errorf("expected %s but got %s", expected, got)
 	}
 }
+
+func TestServiceErrorToErrorCodeUserMsg(t *testing.T) {
+	svcErr := goalib.InvalidPatternError("body.Foo", "abc", "^+1[-. ]?)?[0-9]{3}?$").(*goalib.ServiceError)
+	goaCode := goa.ServiceErrorToErrorCode(svcErr)
+	msgGot := errcode.GetUserMsg(goaCode)
+	msgExpected := `Foo is invalid`
+	if msgGot != msgExpected {
+		t.Errorf("expected %s got %s", msgExpected, msgGot)
+	}
+	cd := errcode.ClientData(goaCode).(goa.PatternErrClientData)
+	if cd.Field != "Foo" {
+		t.Errorf("expected Foo, got %s", cd.Field)
+	}
+	if cd.Value != "abc" {
+		t.Errorf("expected abc, got %s", cd.Value)
+	}
+	if cd.Name != "invalid_pattern" {
+		t.Errorf("expected invalid_pattern, got %s", cd.Name)
+	}
+}

@@ -170,7 +170,8 @@ type HasClientData interface {
 }
 
 // ClientData retrieves data from a structure that implements HasClientData
-// If HasClientData is not defined it will use the given ErrorCode object.
+// It will unwrap errors to look for HasClientData
+// If HasClientData is not defined it uses the given ErrorCode object.
 // Normally this function is used rather than GetClientData.
 func ClientData(errCode ErrorCode) interface{} {
 	if hasData, ok := errCode.(HasClientData); ok {
