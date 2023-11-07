@@ -222,7 +222,8 @@ func (fe FormatErr) GetUserMsg() string {
 
 func (fe FormatErr) GetClientData() interface{} {
 	data := fieldGotValueClientData(fe.err)
-	data.Value = strings.TrimSuffix(data.Value, `", pattern error`)
+	// An extra error message is appended
+	data.Value = strings.Split(data.Value, `",`)[0]
 	return data
 }
 
