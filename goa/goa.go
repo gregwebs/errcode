@@ -166,6 +166,8 @@ func ServiceErrorToErrorCode(err *goalib.ServiceError) ErrorCodeGoa {
 		switch err.Name {
 		case "invalid_pattern":
 			errorForCode = PatternErr{err: err}
+		case "invalid_format":
+			errorForCode = FormatErr{err: err}
 		}
 	}
 	var errCode errcode.ErrorCode = errcode.NewCodedError(errorForCode, code)
@@ -185,18 +187,50 @@ func (pe PatternErr) Error() string {
 }
 
 func (pe PatternErr) GetUserMsg() string {
-	msg := strings.TrimPrefix(pe.err.Message, "body.")
-	msg = strings.Split(msg, " must match ")[0]
-	if msg != pe.err.Message {
-		msg = msg + " is invalid"
-		return strings.ReplaceAll(msg, "  ", " ")
-	}
-	return ""
+	return userMsgInvalidSplit(pe.err.Message, " must match ")
 }
 
 func (pe PatternErr) GetClientData() interface{} {
+	return fieldGotValueClientData(pe.err)
+}
+
+// var _ errcode.HasClientData = PatternErr{}
+
+type FieldValueClientData struct {
+	ID          string
+	Name        string
+	Field       string
+	Value       string
+	FullMessage string
+}
+
+type FormatErr struct {
+	err *goalib.ServiceError
+}
+
+func (fe FormatErr) Unwrap() error {
+	return fe.err
+}
+
+func (fe FormatErr) Error() string {
+	return fe.err.Error()
+}
+
+func (fe FormatErr) GetUserMsg() string {
+	return userMsgInvalidSplit(fe.err.Message, " must be formatted ")
+}
+
+func (fe FormatErr) GetClientData() interface{} {
+	data := fieldGotValueClientData(fe.err)
+	data.Value = strings.TrimSuffix(data.Value, `", pattern error`)
+	return data
+}
+
+// var _ errcode.HasClientData = FormatErr{}
+
+func fieldGotValueClientData(err *goalib.ServiceError) FieldValueClientData {
 	var value string
-	valueSplit := strings.Split(pe.err.Message, " but got value ")
+	valueSplit := strings.Split(err.Message, " but got value ")
 	if len(valueSplit) == 2 {
 		value = valueSplit[1]
 		after, found := strings.CutPrefix(value, `"`)
@@ -205,24 +239,25 @@ func (pe PatternErr) GetClientData() interface{} {
 		}
 	}
 	var field string
-	if pe.err.Field != nil {
-		field = strings.TrimPrefix(*pe.err.Field, "body.")
+	if err.Field != nil {
+		field = strings.TrimPrefix(*err.Field, "body.")
 	}
-	return PatternErrClientData{
-		ID:          pe.err.ID,
-		Name:        pe.err.Name,
+	return FieldValueClientData{
+		ID:          err.ID,
+		Name:        err.Name,
 		Field:       field,
 		Value:       value,
-		FullMessage: pe.err.Message,
+		FullMessage: err.Message,
 	}
+
 }
 
-// var _ errcode.HasClientData = PatternErr{}
-
-type PatternErrClientData struct {
-	ID          string
-	Name        string
-	Field       string
-	Value       string
-	FullMessage string
+func userMsgInvalidSplit(msgInput string, sep string) string {
+	msg := strings.TrimPrefix(msgInput, "body.")
+	msg = strings.Split(msg, sep)[0]
+	if msg != msgInput {
+		msg = msg + " is invalid"
+		return strings.ReplaceAll(msg, "  ", " ")
+	}
+	return ""
 }
