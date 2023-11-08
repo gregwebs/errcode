@@ -69,7 +69,7 @@ func TestServiceErrorToErrorCode(t *testing.T) {
 	}
 }
 
-func AssertUserMsgClientData(t *testing.T, name string, svcErr *goalib.ServiceError) {
+func AssertUserMsgClientDataValue(t *testing.T, name string, svcErr *goalib.ServiceError) {
 	t.Helper()
 	goaCode := goa.ServiceErrorToErrorCode(svcErr)
 	msgGot := errcode.GetUserMsg(goaCode)
@@ -87,12 +87,30 @@ func AssertUserMsgClientData(t *testing.T, name string, svcErr *goalib.ServiceEr
 	if cd.Name != name {
 		t.Errorf("expected Name to be %s, got %s", name, cd.Name)
 	}
+}
 
+func AssertUserMsgClientData(t *testing.T, name string, svcErr *goalib.ServiceError) {
+	t.Helper()
+	goaCode := goa.ServiceErrorToErrorCode(svcErr)
+	msgGot := errcode.GetUserMsg(goaCode)
+	msgExpected := `Foo is missing`
+	if msgGot != msgExpected {
+		t.Errorf("expected %s got %s", msgExpected, msgGot)
+	}
+	cd := errcode.ClientData(goaCode).(goa.FieldClientData)
+	if cd.Field != "Foo" {
+		t.Errorf("expected Field to be Foo, got %s", cd.Field)
+	}
+	if cd.Name != name {
+		t.Errorf("expected Name to be %s, got %s", name, cd.Name)
+	}
 }
 
 func TestServiceErrorToErrorCodeUserMsg(t *testing.T) {
 	svcErr := goalib.InvalidPatternError("body.Foo", "abc", "^+1[-. ]?)?[0-9]{3}?$").(*goalib.ServiceError)
-	AssertUserMsgClientData(t, "invalid_pattern", svcErr)
+	AssertUserMsgClientDataValue(t, "invalid_pattern", svcErr)
 	svcErr = goalib.InvalidFormatError("body.Foo", "abc", "123", errors.New("pattern error")).(*goalib.ServiceError)
-	AssertUserMsgClientData(t, "invalid_format", svcErr)
+	AssertUserMsgClientDataValue(t, "invalid_format", svcErr)
+	svcErr = goalib.MissingFieldError("Foo", "body").(*goalib.ServiceError)
+	AssertUserMsgClientData(t, "missing_field", svcErr)
 }
