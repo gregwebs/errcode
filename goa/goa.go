@@ -168,6 +168,8 @@ func ServiceErrorToErrorCode(err *goalib.ServiceError) ErrorCodeGoa {
 			errorForCode = PatternErr{err: err}
 		case "invalid_format":
 			errorForCode = FormatErr{err: err}
+		case "missing_field":
+			errorForCode = MissingFieldErr{err: err}
 		}
 	}
 	var errCode errcode.ErrorCode = errcode.NewCodedError(errorForCode, code)
@@ -196,12 +198,16 @@ func (pe PatternErr) GetClientData() interface{} {
 
 // var _ errcode.HasClientData = PatternErr{}
 
-type FieldValueClientData struct {
+type FieldClientData struct {
 	ID          string
 	Name        string
 	Field       string
-	Value       string
 	FullMessage string
+}
+
+type FieldValueClientData struct {
+	FieldClientData
+	Value string
 }
 
 type FormatErr struct {
@@ -227,30 +233,64 @@ func (fe FormatErr) GetClientData() interface{} {
 	return data
 }
 
+type MissingFieldErr struct {
+	err *goalib.ServiceError
+}
+
+func (me MissingFieldErr) Unwrap() error {
+	return me.err
+}
+
+func (me MissingFieldErr) Error() string {
+	return me.err.Error()
+}
+
+func (me MissingFieldErr) GetUserMsg() string {
+	msg := strings.TrimSuffix(me.err.Message, " from body")
+	after, prefixWasCut := strings.CutPrefix(msg, `"`)
+	if prefixWasCut {
+		noIsMissing := strings.Split(after, ` is missing`)[0]
+		before, suffixWasCut := strings.CutSuffix(noIsMissing, `"`)
+		if suffixWasCut {
+			return before + " is missing"
+		}
+	}
+	return msg
+}
+
+func (me MissingFieldErr) GetClientData() interface{} {
+	return fieldClientData(me.err)
+}
+
 // var _ errcode.HasClientData = FormatErr{}
+
+func fieldClientData(err *goalib.ServiceError) FieldClientData {
+	var field string
+	if err.Field != nil {
+		field = strings.TrimPrefix(*err.Field, "body.")
+	}
+	return FieldClientData{
+		ID:          err.ID,
+		Name:        err.Name,
+		Field:       field,
+		FullMessage: err.Message,
+	}
+}
 
 func fieldGotValueClientData(err *goalib.ServiceError) FieldValueClientData {
 	var value string
 	valueSplit := strings.Split(err.Message, " but got value ")
 	if len(valueSplit) == 2 {
-		value = valueSplit[1]
+		value = strings.Split(valueSplit[1], `", `)[0]
 		after, found := strings.CutPrefix(value, `"`)
 		if found {
 			value, _ = strings.CutSuffix(after, `"`)
 		}
 	}
-	var field string
-	if err.Field != nil {
-		field = strings.TrimPrefix(*err.Field, "body.")
-	}
 	return FieldValueClientData{
-		ID:          err.ID,
-		Name:        err.Name,
-		Field:       field,
-		Value:       value,
-		FullMessage: err.Message,
+		Value:           value,
+		FieldClientData: fieldClientData(err),
 	}
-
 }
 
 func userMsgInvalidSplit(msgInput string, sep string) string {
