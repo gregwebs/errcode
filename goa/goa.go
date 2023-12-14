@@ -170,6 +170,8 @@ func ServiceErrorToErrorCode(err *goalib.ServiceError) ErrorCodeGoa {
 			errorForCode = FormatErr{err: err}
 		case "missing_field":
 			errorForCode = MissingFieldErr{err: err}
+		case "invalid_enum_value":
+			errorForCode = EnumErr{err: err}
 		}
 	}
 	var errCode errcode.ErrorCode = errcode.NewCodedError(errorForCode, code)
@@ -189,10 +191,30 @@ func (pe PatternErr) Error() string {
 }
 
 func (pe PatternErr) GetUserMsg() string {
-	return userMsgInvalidSplit(pe.err.Message, " must match ")
+	return userMsgInvalidSplit(pe.err.Message, " must match ", "is invalid")
 }
 
 func (pe PatternErr) GetClientData() interface{} {
+	return fieldGotValueClientData(pe.err)
+}
+
+type EnumErr struct {
+	err *goalib.ServiceError
+}
+
+func (pe EnumErr) Unwrap() error {
+	return pe.err
+}
+
+func (pe EnumErr) Error() string {
+	return pe.err.Error()
+}
+
+func (pe EnumErr) GetUserMsg() string {
+	return userMsgInvalidSplit(pe.err.Message, " but got value ", "")
+}
+
+func (pe EnumErr) GetClientData() interface{} {
 	return fieldGotValueClientData(pe.err)
 }
 
@@ -223,7 +245,7 @@ func (fe FormatErr) Error() string {
 }
 
 func (fe FormatErr) GetUserMsg() string {
-	return userMsgInvalidSplit(fe.err.Message, " must be formatted ")
+	return userMsgInvalidSplit(fe.err.Message, " must be formatted ", "is invalid")
 }
 
 func (fe FormatErr) GetClientData() interface{} {
@@ -293,11 +315,14 @@ func fieldGotValueClientData(err *goalib.ServiceError) FieldValueClientData {
 	}
 }
 
-func userMsgInvalidSplit(msgInput string, sep string) string {
-	msg := strings.TrimPrefix(msgInput, "body.")
+func userMsgInvalidSplit(msgInput string, sep string, appendValue string) string {
+	msg := strings.TrimPrefix(msgInput, "value of body.")
+	msg = strings.TrimPrefix(msg, "body.")
 	msg = strings.Split(msg, sep)[0]
 	if msg != msgInput {
-		msg = msg + " is invalid"
+		if appendValue != "" {
+			msg = msg + " " + appendValue
+		}
 		return strings.ReplaceAll(msg, "  ", " ")
 	}
 	return ""
