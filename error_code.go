@@ -151,8 +151,8 @@ func (code Code) IsAncestor(ancestorCode Code) bool {
 //		return PathBlockedCode
 //	}
 type ErrorCode interface {
-	Error() string // The Error interface
 	Code() Code
+	error
 }
 
 // unwrapper allows the abstract retrieval of the underlying error.
