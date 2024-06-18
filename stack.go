@@ -88,4 +88,4 @@ func (e StackCode) GetClientData() interface{} {
 
 var _ ErrorCode = (*StackCode)(nil)     // assert implements interface
 var _ HasClientData = (*StackCode)(nil) // assert implements interface
-var _ unwrapper = (*StackCode)(nil)        // assert implements interface
+var _ unwrapError = (*StackCode)(nil)   // assert implements interface

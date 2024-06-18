@@ -40,7 +40,7 @@ func GetUserMsg(v interface{}) string {
 	var msg string
 	if hasMsg, ok := v.(HasUserMsg); ok {
 		msg = hasMsg.GetUserMsg()
-	} else if un, ok := v.(unwrapper); ok {
+	} else if un, ok := v.(unwrapError); ok {
 		return GetUserMsg(un.Unwrap())
 	}
 	return msg
@@ -91,7 +91,7 @@ func (e UserMsgErrCode) GetClientData() interface{} {
 var _ ErrorCode = (*UserMsgErrCode)(nil)     // assert implements interface
 var _ HasClientData = (*UserMsgErrCode)(nil) // assert implements interface
 var _ HasUserMsg = (*UserMsgErrCode)(nil)    // assert implements interface
-var _ unwrapper = (*UserMsgErrCode)(nil)     // assert implements interface
+var _ unwrapError = (*UserMsgErrCode)(nil)   // assert implements interface
 
 // AddUserMsg is constructed by UserMsg. It allows method chaining with AddTo.
 type AddUserMsg func(ErrorCode) UserMsgErrCode

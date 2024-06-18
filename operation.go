@@ -35,7 +35,7 @@ func Operation(v interface{}) string {
 	if hasOp, ok := v.(HasOperation); ok {
 		return hasOp.GetOperation()
 	}
-	if un, ok := v.(unwrapper); ok {
+	if un, ok := v.(unwrapError); ok {
 		return Operation(un.Unwrap())
 	}
 	return ""
@@ -86,7 +86,7 @@ func (e OpErrCode) GetClientData() interface{} {
 var _ ErrorCode = (*OpErrCode)(nil)     // assert implements interface
 var _ HasClientData = (*OpErrCode)(nil) // assert implements interface
 var _ HasOperation = (*OpErrCode)(nil)  // assert implements interface
-var _ unwrapper = (*OpErrCode)(nil)     // assert implements interface
+var _ unwrapError = (*OpErrCode)(nil)   // assert implements interface
 
 // AddOp is constructed by Op. It allows method chaining with AddTo.
 type AddOp func(ErrorCode) OpErrCode
