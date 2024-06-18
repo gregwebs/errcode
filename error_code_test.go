@@ -180,6 +180,43 @@ func TestErrorWrapperCode(t *testing.T) {
 	ClientDataEquals(t, ErrorWrapper{Err: sconst}, sconst)
 }
 
+func TestErrorWrapperFunctions(t *testing.T) {
+	coded := errcode.NewBadRequestErr(errors.New("underlying"))
+
+	{
+		wrap := errcode.Wrap(coded, "wrapped")
+		AssertCode(t, coded, wrap.Code().CodeStr())
+		if errMsg := wrap.Error(); errMsg != "wrapped: underlying" {
+			t.Errorf("Wrap unexpected: %s", errMsg)
+		}
+		if errors.Unwrap(wrap) == coded {
+			t.Error("bad unwrap")
+		}
+	}
+
+	{
+		wrapf := errcode.Wrapf(coded, "wrapped %s", "arg")
+		AssertCode(t, coded, wrapf.Code().CodeStr())
+		if errMsg := wrapf.Error(); errMsg != "wrapped arg: underlying" {
+			t.Errorf("Wrap unexpected: %s", errMsg)
+		}
+		if errors.Unwrap(wrapf) == coded {
+			t.Error("bad unwrap")
+		}
+	}
+
+	{
+		wraps := errcode.Wraps(coded, "wrapped", "arg", 1)
+		AssertCode(t, coded, wraps.Code().CodeStr())
+		if errMsg := wraps.Error(); errMsg != "wrapped arg=1: underlying" {
+			t.Errorf("Wrap unexpected: %s", errMsg)
+		}
+		if errors.Unwrap(wraps) == coded {
+			t.Error("bad unwrap")
+		}
+	}
+}
+
 var internalChildCodeStr errcode.CodeStr = "internal.child.granchild"
 var internalChild = errcode.InternalCode.Child("internal.child").SetHTTP(503).Child(internalChildCodeStr)
 
