@@ -185,7 +185,11 @@ func (wrapped wrappedErrorCode) Unwrap() error {
 }
 
 // Wrap is a convenience that calls errors.Wrap but still returns the ErrorCode interface
+// If a nil ErrorCode is given it will be returned as nil
 func Wrap(errCode ErrorCode, msg string) ErrorCode {
+	if errCode == nil {
+		return nil
+	}
 	return wrappedErrorCode{
 		Err:       errors.Wrap(errCode, msg),
 		ErrorCode: errCode,
@@ -193,7 +197,11 @@ func Wrap(errCode ErrorCode, msg string) ErrorCode {
 }
 
 // Wrapf is a convenience that calls errors.Wrapf but still returns the ErrorCode interface
+// If a nil ErrorCode is given it will be returned as nil
 func Wrapf(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
+	if errCode == nil {
+		return nil
+	}
 	return wrappedErrorCode{
 		Err:       errors.Wrapf(errCode, msg, args...),
 		ErrorCode: errCode,
@@ -201,7 +209,11 @@ func Wrapf(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
 }
 
 // Wraps is a convenience that calls errors.Wraps but still returns the ErrorCode interface
+// If a nil ErrorCode is given it will be returned as nil
 func Wraps(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
+	if errCode == nil {
+		return nil
+	}
 	return wrappedErrorCode{
 		Err:       errors.Wraps(errCode, msg, args...),
 		ErrorCode: errCode,
