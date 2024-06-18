@@ -45,6 +45,8 @@ package errcode
 import (
 	"fmt"
 	"strings"
+
+	"github.com/gregwebs/errors"
 )
 
 // CodeStr is the name of the error code.
@@ -161,6 +163,51 @@ type unwrapper interface {
 	Unwrap() error
 }
 
+// wrappedErrorCode is a convenience to maintain the ErrorCode type when wrapping errors
+type wrappedErrorCode struct {
+	Err       error
+	ErrorCode ErrorCode
+}
+
+// Code fulfills the ErrorCode interface
+func (wrapped wrappedErrorCode) Code() Code {
+	return wrapped.ErrorCode.Code()
+}
+
+// Error fulfills the ErrorCode interface
+func (wrapped wrappedErrorCode) Error() string {
+	return wrapped.Err.Error()
+}
+
+// Allow unwrapping
+func (wrapped wrappedErrorCode) Unwrap() error {
+	return wrapped.Err
+}
+
+// Wrap is a convenience that calls errors.Wrap but still returns the ErrorCode interface
+func Wrap(errCode ErrorCode, msg string) ErrorCode {
+	return wrappedErrorCode{
+		Err:       errors.Wrap(errCode, msg),
+		ErrorCode: errCode,
+	}
+}
+
+// Wrapf is a convenience that calls errors.Wrapf but still returns the ErrorCode interface
+func Wrapf(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
+	return wrappedErrorCode{
+		Err:       errors.Wrapf(errCode, msg, args...),
+		ErrorCode: errCode,
+	}
+}
+
+// Wraps is a convenience that calls errors.Wraps but still returns the ErrorCode interface
+func Wraps(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
+	return wrappedErrorCode{
+		Err:       errors.Wraps(errCode, msg, args...),
+		ErrorCode: errCode,
+	}
+}
+
 // HasClientData is used to defined how to retrieve the data portion of an ErrorCode to be returned to the client.
 // Otherwise the struct itself will be assumed to be all the data by the ClientData method.
 // This is provided for exensibility, but may be unnecessary for you.
@@ -191,7 +238,9 @@ func ClientData(errCode ErrorCode) interface{} {
 	return errCode
 }
 
-// JSONFormat is an opinion on how to serialize an ErrorCode to JSON.
+// JSONFormat serializes an ErrorCode to a particular JSON format.
+// You can write your own version of this that matches your needs along with your own constructor function.
+//
 // * Code is the error code string (CodeStr)
 // * Msg is the string from Error() and should be friendly to end users.
 // * Data is the ad-hoc data filled in by GetClientData and should be consumable by clients.
@@ -223,7 +272,7 @@ func OperationClientData(errCode ErrorCode) (string, interface{}) {
 }
 
 // NewJSONFormat turns an ErrorCode into a JSONFormat.
-// If you use ErrorCodeChain first, you will ensure proper population of the Others field.
+// You can create your own json struct and write your own version of this function.
 func NewJSONFormat(errCode ErrorCode) JSONFormat {
 	// Gather up multiple errors.
 	// We discard any that are not ErrorCode.
