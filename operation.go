@@ -32,13 +32,13 @@ type HasOperation interface {
 // It checks recursively for the HasOperation interface.
 // Otherwise it will return the zero value (empty) string.
 func Operation(v interface{}) string {
-	var operation string
 	if hasOp, ok := v.(HasOperation); ok {
-		operation = hasOp.GetOperation()
-	} else if un, ok := v.(unwrapper); ok {
+		return hasOp.GetOperation()
+	}
+	if un, ok := v.(unwrapper); ok {
 		return Operation(un.Unwrap())
 	}
-	return operation
+	return ""
 }
 
 // EmbedOp is designed to be embedded into your existing error structs.
