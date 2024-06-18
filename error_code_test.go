@@ -60,7 +60,7 @@ func TestMinimalErrorCode(t *testing.T) {
 	minimal := MinimalError{}
 	AssertCodes(t, minimal)
 	ErrorEquals(t, minimal, "error")
-	ClientDataEquals(t, minimal, minimal)
+	ClientDataEqualsDef(t, minimal, minimal)
 	OpEquals(t, minimal, "")
 	UserMsgEquals(t, minimal, "")
 }
@@ -80,7 +80,7 @@ func TestChildOnlyErrorCode(t *testing.T) {
 	coe := ChildOnlyError{}
 	AssertCodes(t, coe)
 	ErrorEquals(t, coe, "error")
-	ClientDataEquals(t, coe, coe)
+	ClientDataEqualsDef(t, coe, coe)
 }
 
 // Test a top-level error
@@ -168,51 +168,74 @@ func TestErrorWrapperCode(t *testing.T) {
 	wrapped := ErrorWrapper{Err: errors.New("error")}
 	AssertCodes(t, wrapped)
 	ErrorEquals(t, wrapped, "error")
-	ClientDataEquals(t, wrapped, errors.New("error"))
+	ClientDataEqualsDef(t, wrapped, errors.New("error"))
 	s2 := Struct2{A: "A", B: "B"}
 	wrappedS2 := ErrorWrapper{Err: s2}
 	AssertCodes(t, wrappedS2)
 	ErrorEquals(t, wrappedS2, "error A & B A & B")
-	ClientDataEquals(t, wrappedS2, s2)
+	ClientDataEqualsDef(t, wrappedS2, s2)
 	s1 := Struct1{A: "A"}
-	ClientDataEquals(t, ErrorWrapper{Err: s1}, s1)
+	ClientDataEqualsDef(t, ErrorWrapper{Err: s1}, s1)
 	sconst := StructConstError1{A: "A"}
-	ClientDataEquals(t, ErrorWrapper{Err: sconst}, sconst)
+	ClientDataEqualsDef(t, ErrorWrapper{Err: sconst}, sconst)
+}
+
+func TestErrorWrapperNil(t *testing.T) {
+	if errcode.Wrap[errcode.ErrorCode](nil, "wrapped") != nil {
+		t.Errorf("not nil")
+	}
+	if errcode.Wrapf[errcode.ErrorCode](nil, "wrapped") != nil {
+		t.Errorf("not nil")
+	}
+	if errcode.Wraps[errcode.ErrorCode](nil, "wrapped") != nil {
+		t.Errorf("not nil")
+	}
 }
 
 func TestErrorWrapperFunctions(t *testing.T) {
-	coded := errcode.NewBadRequestErr(errors.New("underlying"))
+	underlying := errors.New("underlying")
+	coded := errcode.NewBadRequestErr(underlying)
+	AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
 
 	{
 		wrap := errcode.Wrap(coded, "wrapped")
-		AssertCode(t, coded, wrap.Code().CodeStr())
+		AssertCode(t, wrap, errcode.InvalidInputCode.CodeStr())
 		if errMsg := wrap.Error(); errMsg != "wrapped: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		if errors.Unwrap(wrap) == coded {
-			t.Error("bad unwrap")
+		if errors.Unwrap(wrap).Error() != underlying.Error() {
+			t.Errorf("bad unwrap %+v", errors.Unwrap(wrap))
+		}
+		if wrap.Unwrapped() != coded {
+			t.Errorf("bad unwrapped")
 		}
 	}
 
 	{
 		wrapf := errcode.Wrapf(coded, "wrapped %s", "arg")
-		AssertCode(t, coded, wrapf.Code().CodeStr())
+		AssertCode(t, wrapf, errcode.InvalidInputCode.CodeStr())
 		if errMsg := wrapf.Error(); errMsg != "wrapped arg: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		if errors.Unwrap(wrapf) == coded {
-			t.Error("bad unwrap")
+		if errors.Unwrap(wrapf).Error() != underlying.Error() {
+			t.Errorf("bad unwrap %+v", errors.Unwrap(wrapf))
+		}
+		if wrapf.Unwrapped() != coded {
+			t.Errorf("bad unwrapped")
 		}
 	}
 
 	{
 		wraps := errcode.Wraps(coded, "wrapped", "arg", 1)
-		AssertCode(t, coded, wraps.Code().CodeStr())
+		AssertCode(t, wraps, errcode.InvalidInputCode.CodeStr())
 		if errMsg := wraps.Error(); errMsg != "wrapped arg=1: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		if errors.Unwrap(wraps) == coded {
-			t.Error("bad unwrap")
+		if errors.Unwrap(wraps).Error() != underlying.Error() {
+			t.Errorf("bad unwrap %+v", errors.Unwrap(wraps))
+		}
+		if wraps.Unwrapped() != coded {
+			t.Errorf("bad unwrapped")
 		}
 	}
 }
@@ -242,13 +265,13 @@ func TestNewInvalidInputErr(t *testing.T) {
 	AssertCode(t, err, internalCodeStr)
 	AssertHTTPCode(t, err, 500)
 	ErrorEquals(t, err, "error")
-	ClientDataEquals(t, err, MinimalError{}, internalCodeStr)
+	ClientDataEquals(t, err, MinimalError{}, internalCodeStr, MinimalError{})
 
 	wrappedInternalErr := errcode.NewInternalErr(internalErr)
 	AssertCode(t, err, internalCodeStr)
 	AssertHTTPCode(t, err, 500)
 	ErrorEquals(t, err, "error")
-	ClientDataEquals(t, wrappedInternalErr, MinimalError{}, internalCodeStr)
+	ClientDataEquals(t, wrappedInternalErr, MinimalError{}, internalCodeStr, MinimalError{})
 	// It should use the original stack trace, not the wrapped
 	AssertStackEquals(t, wrappedInternalErr, errcode.StackTrace(internalErr))
 
@@ -283,14 +306,14 @@ func TestNewInternalErr(t *testing.T) {
 	AssertCode(t, err, internalCodeStr)
 	AssertHTTPCode(t, err, 500)
 	ErrorEquals(t, err, "error")
-	ClientDataEquals(t, err, MinimalError{}, internalCodeStr)
+	ClientDataEquals(t, err, MinimalError{}, internalCodeStr, MinimalError{})
 
 	invalidErr := errcode.NewInvalidInputErr(MinimalError{})
 	err = errcode.NewInternalErr(invalidErr)
 	AssertCode(t, err, internalCodeStr)
 	AssertHTTPCode(t, err, 500)
 	ErrorEquals(t, err, "error")
-	ClientDataEquals(t, err, MinimalError{}, internalCodeStr)
+	ClientDataEquals(t, err, MinimalError{}, internalCodeStr, MinimalError{})
 }
 
 // Test Operation
@@ -328,7 +351,7 @@ func TestOpErrorCode(t *testing.T) {
 	AssertOperation(t, has, "has")
 	AssertCodes(t, has)
 	ErrorEquals(t, has, "error")
-	ClientDataEquals(t, has, has)
+	ClientDataEqualsDef(t, has, has)
 	OpEquals(t, has, "has")
 
 	OpEquals(t, OpErrorEmbed{}, "")
@@ -370,7 +393,7 @@ func TestUserMsg(t *testing.T) {
 	AssertUserMsg(t, ue, "user")
 	AssertCodes(t, ue)
 	ErrorEquals(t, ue, "error")
-	ClientDataEquals(t, ue, ue)
+	ClientDataEqualsDef(t, ue, ue)
 	UserMsgEquals(t, ue, "user")
 
 	UserMsgEquals(t, UserMsgErrorEmbed{}, "")
@@ -428,11 +451,12 @@ func ErrorEquals(t *testing.T, err error, msg string) {
 	}
 }
 
-func ClientDataEquals(t *testing.T, code errcode.ErrorCode, data interface{}, codeStrs ...errcode.CodeStr) {
-	codeStr := codeString
-	if len(codeStrs) > 0 {
-		codeStr = codeStrs[0]
-	}
+func ClientDataEqualsDef(t *testing.T, code errcode.ErrorCode, data interface{}) {
+	t.Helper()
+	ClientDataEquals(t, code, data, codeString)
+}
+
+func ClientDataEquals(t *testing.T, code errcode.ErrorCode, data interface{}, codeStr errcode.CodeStr, otherCodes ...errcode.ErrorCode) {
 	t.Helper()
 
 	jsonEquals(t, "ClientData", data, errcode.ClientData(code))
@@ -441,11 +465,16 @@ func ClientDataEquals(t *testing.T, code errcode.ErrorCode, data interface{}, co
 		msg = code.Error()
 	}
 
+	others := make([]errcode.JSONFormat, len(otherCodes))
+	for i, err := range otherCodes {
+		others[i] = errcode.NewJSONFormat(err)
+	}
 	jsonExpected := errcode.JSONFormat{
 		Data:      data,
 		Msg:       msg,
 		Code:      codeStr,
 		Operation: errcode.Operation(data),
+		Others:    others,
 	}
 	newJSON := errcode.NewJSONFormat(code)
 	jsonEquals(t, "JSONFormat", jsonExpected, newJSON)

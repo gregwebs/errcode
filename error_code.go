@@ -159,51 +159,79 @@ type ErrorCode interface {
 // Formalize the Unwrap interface, but don't export it.
 // The standard library errors package should export it.
 // Types that wrap errors should implement this to allow viewing of the underlying error.
-type unwrapper interface {
+type unwrapError interface {
 	Unwrap() error
 }
 
+type Unwrapper[T any] interface {
+	Unwrapped() T
+}
+
+type ErrorCodeWrap[Wrap ErrorCode] interface {
+	ErrorCode
+	Unwrapper[Wrap]
+}
+
 // wrappedErrorCode is a convenience to maintain the ErrorCode type when wrapping errors
-type wrappedErrorCode struct {
+type wrappedErrorCode[Wrapped ErrorCode] struct {
 	Err       error
-	ErrorCode ErrorCode
+	ErrorCode Wrapped
 }
 
 // Code fulfills the ErrorCode interface
-func (wrapped wrappedErrorCode) Code() Code {
+func (wrapped wrappedErrorCode[Wrapped]) Code() Code {
 	return wrapped.ErrorCode.Code()
 }
 
 // Error fulfills the ErrorCode interface
-func (wrapped wrappedErrorCode) Error() string {
+func (wrapped wrappedErrorCode[Wrapped]) Error() string {
 	return wrapped.Err.Error()
 }
 
 // Allow unwrapping
-func (wrapped wrappedErrorCode) Unwrap() error {
-	return wrapped.Err
+func (wrapped wrappedErrorCode[Wrapped]) Unwrap() error {
+	return wrapped.ErrorCode
+}
+
+func (wrapped wrappedErrorCode[Wrapped]) Unwrapped() Wrapped {
+	return wrapped.ErrorCode
 }
 
 // Wrap is a convenience that calls errors.Wrap but still returns the ErrorCode interface
-func Wrap(errCode ErrorCode, msg string) ErrorCode {
-	return wrappedErrorCode{
-		Err:       errors.Wrap(errCode, msg),
+// If a nil ErrorCode is given it will be returned as nil
+func Wrap[EC ErrorCode](errCode EC, msg string) ErrorCodeWrap[EC] {
+	err := errors.Wrap(errCode, msg)
+	if err == nil {
+		return nil
+	}
+	return wrappedErrorCode[EC]{
+		Err:       err,
 		ErrorCode: errCode,
 	}
 }
 
 // Wrapf is a convenience that calls errors.Wrapf but still returns the ErrorCode interface
-func Wrapf(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
-	return wrappedErrorCode{
-		Err:       errors.Wrapf(errCode, msg, args...),
+// If a nil ErrorCode is given it will be returned as nil
+func Wrapf[EC ErrorCode](errCode EC, msg string, args ...interface{}) ErrorCodeWrap[EC] {
+	err := errors.Wrapf(errCode, msg, args...)
+	if err == nil {
+		return nil
+	}
+	return wrappedErrorCode[EC]{
+		Err:       err,
 		ErrorCode: errCode,
 	}
 }
 
 // Wraps is a convenience that calls errors.Wraps but still returns the ErrorCode interface
-func Wraps(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
-	return wrappedErrorCode{
-		Err:       errors.Wraps(errCode, msg, args...),
+// If a nil ErrorCode is given it will be returned as nil
+func Wraps[EC ErrorCode](errCode EC, msg string, args ...interface{}) ErrorCodeWrap[EC] {
+	err := errors.Wraps(errCode, msg, args...)
+	if err == nil {
+		return nil
+	}
+	return wrappedErrorCode[EC]{
+		Err:       err,
 		ErrorCode: errCode,
 	}
 }
@@ -226,7 +254,7 @@ func ClientData(errCode ErrorCode) interface{} {
 	}
 	var err error = errCode
 	for {
-		if un, ok := err.(unwrapper); ok {
+		if un, ok := err.(unwrapError); ok {
 			err = un.Unwrap()
 			if hasData, ok := err.(HasClientData); ok {
 				return hasData.GetClientData()

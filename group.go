@@ -22,13 +22,16 @@ import (
 // ErrorCodes return all errors (from an ErrorGroup) that are of interface ErrorCode.
 // It first calls the Errors function.
 func ErrorCodes(err error) []ErrorCode {
-	errors := errors.Errors(err)
-	errorCodes := make([]ErrorCode, 0, len(errors))
-	for _, errItem := range errors {
-		if errcode, ok := errItem.(ErrorCode); ok {
-			errorCodes = append(errorCodes, errcode)
+	errorCodes := make([]ErrorCode, 0)
+	errors.WalkDeep(err, func(err error) bool {
+		if errcode, ok := err.(ErrorCode); ok {
+			// avoid duplicating codes
+			if len(errorCodes) == 0 || errorCodes[len(errorCodes)-1].Code().codeStr != errcode.Code().codeStr {
+				errorCodes = append(errorCodes, errcode)
+			}
 		}
-	}
+		return false
+	})
 	return errorCodes
 }
 
@@ -60,7 +63,7 @@ func Combine(initial ErrorCode, others ...ErrorCode) MultiErrCode {
 
 var _ ErrorCode = (*MultiErrCode)(nil)         // assert implements interface
 var _ HasClientData = (*MultiErrCode)(nil)     // assert implements interface
-var _ unwrapper = (*MultiErrCode)(nil)         // assert implements interface
+var _ unwrapError = (*MultiErrCode)(nil)       // assert implements interface
 var _ errors.ErrorGroup = (*MultiErrCode)(nil) // assert implements interface
 var _ fmt.Formatter = (*MultiErrCode)(nil)     // assert implements interface
 
@@ -168,7 +171,7 @@ func (err ChainContext) GetClientData() interface{} {
 
 var _ ErrorCode = (*ChainContext)(nil)
 var _ HasClientData = (*ChainContext)(nil)
-var _ unwrapper = (*ChainContext)(nil)
+var _ unwrapError = (*ChainContext)(nil)
 
 // Format implements the Formatter interface
 func (err ChainContext) Format(s fmt.State, verb rune) {

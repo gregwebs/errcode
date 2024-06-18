@@ -29,6 +29,7 @@ func AssertLength[Any any](t *testing.T, slice []Any, expected int) {
 	}
 
 }
+
 func TestErrorCodes(t *testing.T) {
 	codes := errcode.ErrorCodes(nil)
 	AssertLength(t, codes, 0)
