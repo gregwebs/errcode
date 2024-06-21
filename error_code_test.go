@@ -376,16 +376,20 @@ func TestOpErrorCode(t *testing.T) {
 	OpEquals(t, errcode.OpErrCode{Operation: "opcode", Err: has}, "opcode")
 }
 
+/*
 func assertPanics[T any](t *testing.T, f func() T) {
+	t.Helper()
 	var res T
 	defer func() {
 		if r := recover(); r == nil {
+			t.Helper()
 			t.Errorf("testPanic: did not panic, got: %v", res)
 		}
 	}()
 
 	res = f()
 }
+*/
 
 func TestUserMsg(t *testing.T) {
 	AssertUserMsg(t, "foo", "")
@@ -403,8 +407,12 @@ func TestUserMsg(t *testing.T) {
 	UserMsgEquals(t, um.AddTo(MinimalError{}), "modify")
 
 	umEmpty := errcode.UserMsg("")
-	assertPanics(t, func() errcode.ErrorCode { return umEmpty.AddTo(MinimalError{}) })
-	assertPanics(t, func() errcode.ErrorCode { return umEmpty.AddTo(nil) })
+	if errcode.GetUserMsg(umEmpty.AddTo(MinimalError{})) != "" {
+		t.Errorf("expected empty string")
+	}
+	if umEmpty.AddTo(nil) != nil {
+		t.Errorf("expected nil")
+	}
 
 	UserMsgEquals(t, ErrorWrapper{Err: ue}, "user")
 	UserMsgEquals(t, ErrorWrapper{Err: UserMsgErrorEmbed{EmbedUserMsg: errcode.EmbedUserMsg{Msg: "field"}}}, "field")
