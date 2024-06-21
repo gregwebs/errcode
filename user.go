@@ -94,10 +94,10 @@ var _ HasUserMsg = (*UserMsgErrCode)(nil)    // assert implements interface
 var _ unwrapError = (*UserMsgErrCode)(nil)   // assert implements interface
 
 // AddUserMsg is constructed by UserMsg. It allows method chaining with AddTo.
-type AddUserMsg func(ErrorCode) UserMsgErrCode
+type AddUserMsg func(ErrorCode) UserCode
 
 // AddTo adds the user message from UserMsg to the given ErrorCode
-func (add AddUserMsg) AddTo(err ErrorCode) UserMsgErrCode {
+func (add AddUserMsg) AddTo(err ErrorCode) UserCode {
 	return add(err)
 }
 
@@ -109,19 +109,16 @@ func (add AddUserMsg) AddTo(err ErrorCode) UserMsgErrCode {
 //		return userMsg.AddTo(PathBlocked{start, end, obstacle})
 //	}
 func UserMsg(msg string) AddUserMsg {
-	return func(err ErrorCode) UserMsgErrCode {
+	return func(err ErrorCode) UserCode {
 		return WithUserMsg(msg, err)
 	}
 }
 
 // WithUserMsg creates a UserMsgErrCode
 // Panics if msg is empty or err is nil.
-func WithUserMsg(msg string, err ErrorCode) UserMsgErrCode {
+func WithUserMsg(msg string, err ErrorCode) UserCode {
 	if err == nil {
-		panic("WithUserMsg ErrorCode is nil")
-	}
-	if msg == "" {
-		panic("WithUserMsg msg is empty")
+		return nil
 	}
 	return UserMsgErrCode{Msg: msg, Err: err}
 }
