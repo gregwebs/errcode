@@ -78,15 +78,9 @@ func (e OpErrCode) Code() Code {
 	return e.Err.Code()
 }
 
-// GetClientData returns the ClientData of the underlying Err.
-func (e OpErrCode) GetClientData() interface{} {
-	return ClientData(e.Err)
-}
-
-var _ ErrorCode = (*OpErrCode)(nil)     // assert implements interface
-var _ HasClientData = (*OpErrCode)(nil) // assert implements interface
-var _ HasOperation = (*OpErrCode)(nil)  // assert implements interface
-var _ unwrapError = (*OpErrCode)(nil)   // assert implements interface
+var _ ErrorCode = (*OpErrCode)(nil)    // assert implements interface
+var _ HasOperation = (*OpErrCode)(nil) // assert implements interface
+var _ unwrapError = (*OpErrCode)(nil)  // assert implements interface
 
 // AddOp is constructed by Op. It allows method chaining with AddTo.
 type AddOp func(ErrorCode) OpErrCode

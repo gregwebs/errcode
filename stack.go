@@ -81,11 +81,5 @@ func (e StackCode) Code() Code {
 	return e.Err.Code()
 }
 
-// GetClientData returns the ClientData of the underlying Err.
-func (e StackCode) GetClientData() interface{} {
-	return ClientData(e.Err)
-}
-
-var _ ErrorCode = (*StackCode)(nil)     // assert implements interface
-var _ HasClientData = (*StackCode)(nil) // assert implements interface
-var _ unwrapError = (*StackCode)(nil)   // assert implements interface
+var _ ErrorCode = (*StackCode)(nil)   // assert implements interface
+var _ unwrapError = (*StackCode)(nil) // assert implements interface

@@ -62,7 +62,6 @@ func Combine(initial ErrorCode, others ...ErrorCode) MultiErrCode {
 }
 
 var _ ErrorCode = (*MultiErrCode)(nil)         // assert implements interface
-var _ HasClientData = (*MultiErrCode)(nil)     // assert implements interface
 var _ unwrapError = (*MultiErrCode)(nil)       // assert implements interface
 var _ errors.ErrorGroup = (*MultiErrCode)(nil) // assert implements interface
 var _ fmt.Formatter = (*MultiErrCode)(nil)     // assert implements interface
@@ -88,11 +87,6 @@ func (e MultiErrCode) Code() Code {
 // Unwrap fullfills the errors package Unwrap function
 func (e MultiErrCode) Unwrap() error {
 	return e.ErrCode
-}
-
-// GetClientData fullfills the HasClientData inteface
-func (e MultiErrCode) GetClientData() interface{} {
-	return ClientData(e.ErrCode)
 }
 
 // CodeChain resolves wrapped errors down to the first ErrorCode.
@@ -164,13 +158,7 @@ func (err ChainContext) Unwrap() error {
 	return err.ErrCode
 }
 
-// GetClientData satisfies the HasClientData interface
-func (err ChainContext) GetClientData() interface{} {
-	return ClientData(err.ErrCode)
-}
-
 var _ ErrorCode = (*ChainContext)(nil)
-var _ HasClientData = (*ChainContext)(nil)
 var _ unwrapError = (*ChainContext)(nil)
 
 // Format implements the Formatter interface

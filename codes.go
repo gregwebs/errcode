@@ -98,9 +98,8 @@ func NewCodedError(err error, code Code) CodedError {
 	return CodedError{GetCode: code, Err: err}
 }
 
-var _ ErrorCode = (*CodedError)(nil)     // assert implements interface
-var _ HasClientData = (*CodedError)(nil) // assert implements interface
-var _ unwrapError = (*CodedError)(nil)   // assert implements interface
+var _ ErrorCode = (*CodedError)(nil)   // assert implements interface
+var _ unwrapError = (*CodedError)(nil) // assert implements interface
 
 func (e CodedError) Error() string {
 	return e.Err.Error()
@@ -116,17 +115,6 @@ func (e CodedError) Code() Code {
 	return e.GetCode
 }
 
-// GetClientData returns the underlying Err field.
-func (e CodedError) GetClientData() interface{} {
-	if cd, ok := e.Err.(HasClientData); ok {
-		return cd.GetClientData()
-	}
-	if errCode, ok := e.Err.(ErrorCode); ok {
-		return ClientData(errCode)
-	}
-	return e.Err
-}
-
 // invalidInputErr gives the code InvalidInputCode.
 type invalidInputErr struct{ CodedError }
 
@@ -137,9 +125,8 @@ func NewInvalidInputErr(err error) ErrorCode {
 	return invalidInputErr{NewCodedError(err, InvalidInputCode)}
 }
 
-var _ ErrorCode = (*invalidInputErr)(nil)     // assert implements interface
-var _ HasClientData = (*invalidInputErr)(nil) // assert implements interface
-var _ unwrapError = (*invalidInputErr)(nil)   // assert implements interface
+var _ ErrorCode = (*invalidInputErr)(nil)   // assert implements interface
+var _ unwrapError = (*invalidInputErr)(nil) // assert implements interface
 
 // badReqeustErr gives the code BadRequestErr.
 type BadRequestErr struct{ CodedError }
@@ -165,9 +152,8 @@ func NewInternalErr(err error) InternalErr {
 	return InternalErr{internalStackCode(err)}
 }
 
-var _ ErrorCode = (*InternalErr)(nil)     // assert implements interface
-var _ HasClientData = (*InternalErr)(nil) // assert implements interface
-var _ unwrapError = (*InternalErr)(nil)   // assert implements interface
+var _ ErrorCode = (*InternalErr)(nil)   // assert implements interface
+var _ unwrapError = (*InternalErr)(nil) // assert implements interface
 
 // makeInternalStackCode builds a function for making an an internal error with a stack trace.
 func makeInternalStackCode(defaultCode Code) func(error) StackCode {
@@ -225,9 +211,8 @@ func NewNotFoundErr(err error) NotFoundErr {
 	return NotFoundErr{NewCodedError(err, NotFoundCode)}
 }
 
-var _ ErrorCode = (*NotFoundErr)(nil)     // assert implements interface
-var _ HasClientData = (*NotFoundErr)(nil) // assert implements interface
-var _ unwrapError = (*NotFoundErr)(nil)   // assert implements interface
+var _ ErrorCode = (*NotFoundErr)(nil)   // assert implements interface
+var _ unwrapError = (*NotFoundErr)(nil) // assert implements interface
 
 // NotAuthenticatedErr gives the code NotAuthenticatedCode.
 type NotAuthenticatedErr struct{ CodedError }
@@ -239,9 +224,8 @@ func NewNotAuthenticatedErr(err error) NotAuthenticatedErr {
 	return NotAuthenticatedErr{NewCodedError(err, NotAuthenticatedCode)}
 }
 
-var _ ErrorCode = (*NotAuthenticatedErr)(nil)     // assert implements interface
-var _ HasClientData = (*NotAuthenticatedErr)(nil) // assert implements interface
-var _ unwrapError = (*NotAuthenticatedErr)(nil)   // assert implements interface
+var _ ErrorCode = (*NotAuthenticatedErr)(nil)   // assert implements interface
+var _ unwrapError = (*NotAuthenticatedErr)(nil) // assert implements interface
 
 // ForbiddenErr gives the code ForbiddenCode.
 type ForbiddenErr struct{ CodedError }
@@ -253,9 +237,8 @@ func NewForbiddenErr(err error) ForbiddenErr {
 	return ForbiddenErr{NewCodedError(err, ForbiddenCode)}
 }
 
-var _ ErrorCode = (*ForbiddenErr)(nil)     // assert implements interface
-var _ HasClientData = (*ForbiddenErr)(nil) // assert implements interface
-var _ unwrapError = (*ForbiddenErr)(nil)   // assert implements interface
+var _ ErrorCode = (*ForbiddenErr)(nil)   // assert implements interface
+var _ unwrapError = (*ForbiddenErr)(nil) // assert implements interface
 
 // UnprocessableErr gives the code UnprocessibleCode.
 type UnprocessableErr struct{ CodedError }
