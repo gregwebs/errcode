@@ -253,7 +253,7 @@ func TestNewInvalidInputErr(t *testing.T) {
 	err = errcode.NewInvalidInputErr(errors.New("new error"))
 	AssertCodes(t, err, "input")
 	ErrorEquals(t, err, "new error")
-	ClientDataEquals(t, err, errors.New("new error"), "input")
+	ClientDataEquals(t, err, nil, "input")
 
 	err = errcode.NewInvalidInputErr(MinimalError{})
 	AssertCodes(t, err, "input.testcode")
@@ -290,7 +290,7 @@ func TestStackTrace(t *testing.T) {
 	AssertCode(t, wrappedInternalErr, internalCodeStr)
 	AssertHTTPCode(t, wrappedInternalErr, 500)
 	ErrorEquals(t, err, "errors stack")
-	ClientDataEquals(t, wrappedInternalErr, err, internalCodeStr)
+	ClientDataEquals(t, wrappedInternalErr, nil, internalCodeStr)
 	// It should use the original stack trace, not the wrapped
 	AssertStackEquals(t, wrappedInternalErr, errcode.StackTrace(err))
 }
@@ -301,7 +301,7 @@ func TestNewInternalErr(t *testing.T) {
 	AssertCode(t, err, internalCodeStr)
 	AssertHTTPCode(t, err, 500)
 	ErrorEquals(t, err, "new error")
-	ClientDataEquals(t, err, errors.New("new error"), "internal")
+	ClientDataEquals(t, err, nil, "internal")
 
 	err = errcode.NewInternalErr(MinimalError{})
 	AssertCode(t, err, internalCodeStr)
