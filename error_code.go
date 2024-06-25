@@ -246,7 +246,6 @@ type HasClientData interface {
 
 // ClientData retrieves data from a structure that implements HasClientData
 // It will unwrap errors to look for HasClientData
-// If HasClientData is not defined it uses the given ErrorCode object.
 // Normally this function is used rather than GetClientData.
 func ClientData(errCode ErrorCode) interface{} {
 	if hasData, ok := errCode.(HasClientData); ok {
@@ -263,7 +262,7 @@ func ClientData(errCode ErrorCode) interface{} {
 			break
 		}
 	}
-	return errCode
+	return nil
 }
 
 // JSONFormat serializes an ErrorCode to a particular JSON format.
@@ -293,7 +292,7 @@ type JSONFormat struct {
 func OperationClientData(errCode ErrorCode) (string, interface{}) {
 	op := Operation(errCode)
 	data := ClientData(errCode)
-	if op == "" {
+	if op == "" && data != nil {
 		op = Operation(data)
 	}
 	return op, data
