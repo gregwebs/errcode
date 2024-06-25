@@ -83,15 +83,9 @@ func (e UserMsgErrCode) Code() Code {
 	return e.Err.Code()
 }
 
-// GetClientData returns the ClientData of the underlying Err.
-func (e UserMsgErrCode) GetClientData() interface{} {
-	return ClientData(e.Err)
-}
-
-var _ ErrorCode = (*UserMsgErrCode)(nil)     // assert implements interface
-var _ HasClientData = (*UserMsgErrCode)(nil) // assert implements interface
-var _ HasUserMsg = (*UserMsgErrCode)(nil)    // assert implements interface
-var _ unwrapError = (*UserMsgErrCode)(nil)   // assert implements interface
+var _ ErrorCode = (*UserMsgErrCode)(nil)   // assert implements interface
+var _ HasUserMsg = (*UserMsgErrCode)(nil)  // assert implements interface
+var _ unwrapError = (*UserMsgErrCode)(nil) // assert implements interface
 
 // AddUserMsg is constructed by UserMsg. It allows method chaining with AddTo.
 type AddUserMsg func(ErrorCode) UserCode
