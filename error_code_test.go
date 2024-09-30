@@ -190,6 +190,15 @@ func TestErrorWrapperNil(t *testing.T) {
 	if errcode.Wraps[errcode.ErrorCode](nil, "wrapped") != nil {
 		t.Errorf("not nil")
 	}
+	if errcode.UserWrap[errcode.UserCode](nil, "wrapped") != nil {
+		t.Errorf("not nil")
+	}
+	if errcode.UserWrapf[errcode.UserCode](nil, "wrapped") != nil {
+		t.Errorf("not nil")
+	}
+	if errcode.UserWraps[errcode.UserCode](nil, "wrapped") != nil {
+		t.Errorf("not nil")
+	}
 }
 
 func TestErrorWrapperFunctions(t *testing.T) {
@@ -232,6 +241,54 @@ func TestErrorWrapperFunctions(t *testing.T) {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
 		if errors.Unwrap(wraps).Error() != underlying.Error() {
+			t.Errorf("bad unwrap %+v", errors.Unwrap(wraps))
+		}
+		if wraps.Unwrapped() != coded {
+			t.Errorf("bad unwrapped")
+		}
+	}
+}
+
+func TestUserWrapperFunctions(t *testing.T) {
+	underlying := errors.New("underlying")
+	ec := errcode.NewBadRequestErr(underlying)
+	coded := errcode.WithUserMsg("user", ec)
+	AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
+	{
+		wrap := errcode.UserWrap(coded, "wrapped")
+		AssertCode(t, wrap, errcode.InvalidInputCode.CodeStr())
+		if errMsg := wrap.Error(); errMsg != "wrapped: user: underlying" {
+			t.Errorf("Wrap unexpected: %s", errMsg)
+		}
+		if errors.Unwrap(wrap).Error() != coded.Error() {
+			t.Errorf("bad unwrap %+v", errors.Unwrap(wrap))
+		}
+		if wrap.Unwrapped() != coded {
+			t.Errorf("bad unwrapped")
+		}
+	}
+
+	{
+		wrapf := errcode.UserWrapf(coded, "wrapped %s", "arg")
+		AssertCode(t, wrapf, errcode.InvalidInputCode.CodeStr())
+		if errMsg := wrapf.Error(); errMsg != "wrapped arg: user: underlying" {
+			t.Errorf("Wrap unexpected: %s", errMsg)
+		}
+		if errors.Unwrap(wrapf).Error() != coded.Error() {
+			t.Errorf("bad unwrap %+v", errors.Unwrap(wrapf))
+		}
+		if wrapf.Unwrapped() != coded {
+			t.Errorf("bad unwrapped")
+		}
+	}
+
+	{
+		wraps := errcode.UserWraps(coded, "wrapped", "arg", 1)
+		AssertCode(t, wraps, errcode.InvalidInputCode.CodeStr())
+		if errMsg := wraps.Error(); errMsg != "wrapped arg=1: user: underlying" {
+			t.Errorf("Wrap unexpected: %s", errMsg)
+		}
+		if errors.Unwrap(wraps).Error() != coded.Error() {
 			t.Errorf("bad unwrap %+v", errors.Unwrap(wraps))
 		}
 		if wraps.Unwrapped() != coded {
