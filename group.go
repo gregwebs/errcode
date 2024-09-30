@@ -35,38 +35,79 @@ func ErrorCodes(err error) []ErrorCode {
 	return errorCodes
 }
 
-// A MultiErrCode contains at least one ErrorCode and uses that to satisfy the ErrorCode and related interfaces
-// The Error method will produce a string of all the errors with a semi-colon separation.
-// Later code (such as a JSON response) needs to look for the ErrorGroup interface.
-type MultiErrCode struct {
-	ErrCode ErrorCode
+type multiCode[Err ErrorCode] struct {
+	ErrCode Err
 	rest    []error
 }
 
-// Combine constructs a MultiErrCode.
-// It will combine any other MultiErrCode into just one MultiErrCode.
+// Combine constructs a group that has at least one ErrorCode
 // This is "horizontal" composition.
-// If you want normal "vertical" composition use BuildChain.
-func Combine(initial ErrorCode, others ...ErrorCode) MultiErrCode {
+// If you want normal "vertical" composition use the Wrap* functions.
+func combineGeneric[Err ErrorCode](initial Err, others ...error) *multiCode[Err] {
 	var rest []error
-	if group, ok := initial.(errors.ErrorGroup); ok {
-		rest = group.Errors()
-	}
 	for _, other := range others {
-		rest = append(rest, errors.Errors(other)...)
+		if ErrorCode(initial) == nil {
+			if errCode, ok := other.(Err); ok {
+				initial = errCode
+				continue
+			}
+		}
+		rest = append(rest, other)
 	}
-	return MultiErrCode{
+	if len(rest) == 0 && ErrorCode(initial) == nil {
+		return nil
+	}
+	return &multiCode[Err]{
 		ErrCode: initial,
 		rest:    rest,
 	}
 }
 
-var _ ErrorCode = (*MultiErrCode)(nil)         // assert implements interface
-var _ unwrapError = (*MultiErrCode)(nil)       // assert implements interface
-var _ errors.ErrorGroup = (*MultiErrCode)(nil) // assert implements interface
-var _ fmt.Formatter = (*MultiErrCode)(nil)     // assert implements interface
+var _ ErrorCode = (*multiCode[ErrorCode])(nil)         // assert implements interface
+var _ unwrapError = (*multiCode[ErrorCode])(nil)       // assert implements interface
+var _ errors.ErrorGroup = (*multiCode[ErrorCode])(nil) // assert implements interface
+var _ fmt.Formatter = (*multiCode[ErrorCode])(nil)     // assert implements interface
 
-func (e MultiErrCode) Error() string {
+// A MultiErrorCode contains at least one ErrorCode and uses that to satisfy the ErrorCode and related interfaces
+// The Error method will produce a string of all the errors with a semi-colon separation.
+type MultiErrorCode struct{ multiCode[ErrorCode] }
+
+// A MultiUserCode is similar to a MultiErrorCode but satisfies UserCode
+type MultiUserCode struct{ multiCode[UserCode] }
+
+var _ UserCode = (*MultiUserCode)(nil) // assert implements interface
+
+func (e MultiUserCode) GetUserMsg() string {
+	return e.ErrCode.GetUserMsg()
+}
+
+func Combine(initial ErrorCode, others ...error) *MultiErrorCode {
+	combined := combineGeneric(initial, others...)
+	if combined == nil {
+		return nil
+	}
+	multiErrCode := multiCode[ErrorCode]{
+		ErrCode: combined.ErrCode,
+		rest:    combined.rest,
+	}
+	return &MultiErrorCode{multiErrCode}
+}
+
+// CombineUser constructs a group that has at least one UserCode
+// It is the same as Combine but the result will satisfy UserCode
+func CombineUser(initial UserCode, others ...error) *MultiUserCode {
+	combined := combineGeneric(initial, others...)
+	if combined == nil {
+		return nil
+	}
+	multiErrCode := multiCode[UserCode]{
+		ErrCode: combined.ErrCode,
+		rest:    combined.rest,
+	}
+	return &MultiUserCode{multiErrCode}
+}
+
+func (e multiCode[Err]) Error() string {
 	output := e.ErrCode.Error()
 	for _, item := range e.rest {
 		output += "; " + item.Error()
@@ -75,22 +116,26 @@ func (e MultiErrCode) Error() string {
 }
 
 // Errors fullfills the ErrorGroup inteface
-func (e MultiErrCode) Errors() []error {
-	return append([]error{e.ErrCode.(error)}, e.rest...)
+func (e multiCode[Err]) Errors() []error {
+	return append([]error{error(e.ErrCode)}, e.rest...)
 }
 
 // Code fullfills the ErrorCode inteface
-func (e MultiErrCode) Code() Code {
+func (e multiCode[Err]) Code() Code {
 	return e.ErrCode.Code()
 }
 
 // Unwrap fullfills the errors package Unwrap function
-func (e MultiErrCode) Unwrap() error {
+func (e multiCode[Err]) Unwrap() error {
+	return e.ErrCode
+}
+
+func (e multiCode[Err]) First() Err {
 	return e.ErrCode
 }
 
 // CodeChain resolves wrapped errors down to the first ErrorCode.
-// An error that is an ErrorGroup with multiple codes will have its error codes combined to a MultiErrCode.
+// An error that is an ErrorGroup with multiple codes will have its error codes combined to a MultiErrorCode.
 // If the given error is not an ErrorCode, a ContextChain will be returned with Top set to the given error.
 // This allows the return object to maintain a full Error() message.
 func CodeChain(errInput error) ErrorCode {
@@ -108,7 +153,11 @@ func CodeChain(errInput error) ErrorCode {
 				if len(group) == 1 {
 					return group[0]
 				} else {
-					return Combine(group[0], group[1:]...)
+					errs := make([]error, len(group[1:]))
+					for i, errCode := range group[1:] {
+						errs[i] = error(errCode)
+					}
+					return Combine(group[0], errs...)
 				}
 			}
 		}
@@ -187,7 +236,7 @@ func (err ChainContext) Format(s fmt.State, verb rune) {
 }
 
 // Format implements the Formatter interface
-func (e MultiErrCode) Format(s fmt.State, verb rune) {
+func (e multiCode[Err]) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
