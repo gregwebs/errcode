@@ -34,7 +34,7 @@ func StackTrace(err error) errors.StackTrace {
 // Generally stack traces aren't needed for user errors, but they are provided by NewInternalErr.
 // Its also possible to define your own structures that satisfy the StackTracer interface.
 type StackCode struct {
-	Err      ErrorCode
+	ErrorCode
 	GetStack errors.StackTracer
 }
 
@@ -60,25 +60,20 @@ func NewStackCode(err ErrorCode, position ...int) StackCode {
 
 	// if there is an existing trace, take that: it should be deeper
 	if tracer := errors.GetStackTracer(err); tracer != nil {
-		return StackCode{Err: err, GetStack: tracer}
+		return StackCode{ErrorCode: err, GetStack: tracer}
 	}
 
-	return StackCode{Err: err, GetStack: errors.NewStack(stackPosition)}
+	return StackCode{ErrorCode: err, GetStack: errors.NewStack(stackPosition)}
 }
 
 // Unwrap satisfies the errors package Unwrap function
 func (e StackCode) Unwrap() error {
-	return e.Err
+	return e.ErrorCode
 }
 
 // Error ignores the stack and gives the underlying Err Error.
 func (e StackCode) Error() string {
-	return e.Err.Error()
-}
-
-// Code returns the underlying Code of Err.
-func (e StackCode) Code() Code {
-	return e.Err.Code()
+	return e.ErrorCode.Error()
 }
 
 var _ ErrorCode = (*StackCode)(nil)   // assert implements interface

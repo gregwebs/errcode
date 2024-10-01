@@ -13,8 +13,6 @@
 
 package errcode
 
-import "github.com/gregwebs/errors"
-
 // HasUserMsg retrieves a user message.
 // The goal is to be able to show an error message that is tailored for end users and to hide extended error messages from the user.
 //
@@ -61,28 +59,23 @@ func (e EmbedUserMsg) GetUserMsg() string {
 // This can be conveniently constructed with NewUserMsg and AddTo or WithUserMsg
 // see the HasUserMsg documentation for alternatives.
 type UserMsgErrCode struct {
+	ErrorCode
 	Msg string
-	Err ErrorCode
 }
 
 // Unwrap satisfies the errors package Unwrap function
 func (e UserMsgErrCode) Unwrap() error {
-	return e.Err
+	return e.ErrorCode
 }
 
 // Error prefixes the user message to the underlying Err Error.
 func (e UserMsgErrCode) Error() string {
-	return e.Msg + ": " + e.Err.Error()
+	return e.Msg + ": " + e.ErrorCode.Error()
 }
 
 // GetUserMsg satisfies the [HasUserMsg] interface.
 func (e UserMsgErrCode) GetUserMsg() string {
 	return e.Msg
-}
-
-// Code returns the underlying Code of Err.
-func (e UserMsgErrCode) Code() Code {
-	return e.Err.Code()
 }
 
 var _ ErrorCode = (*UserMsgErrCode)(nil)   // assert implements interface
@@ -116,79 +109,5 @@ func WithUserMsg(msg string, err ErrorCode) UserCode {
 	if err == nil {
 		return nil
 	}
-	return UserMsgErrCode{Msg: msg, Err: err}
-}
-
-type UserCodeWrap[Wrap UserCode] interface {
-	UserCode
-	Unwrapper[Wrap]
-}
-
-// wrappedUserCode is a convenience to maintain the UserCode type when wrapping errors
-type wrappedUserCode[Wrapped UserCode] struct {
-	Err      error
-	UserCode Wrapped
-}
-
-// Code fulfills the ErrorCode interface
-func (wrapped wrappedUserCode[Wrapped]) Code() Code {
-	return wrapped.UserCode.Code()
-}
-
-// GetUserMsg fulfills the UserCode interface
-func (wrapped wrappedUserCode[Wrapped]) GetUserMsg() string {
-	return wrapped.UserCode.GetUserMsg()
-}
-
-// Error fulfills the Error interface
-func (wrapped wrappedUserCode[Wrapped]) Error() string {
-	return wrapped.Err.Error()
-}
-
-// Allow unwrapping
-func (wrapped wrappedUserCode[Wrapped]) Unwrap() error {
-	return wrapped.UserCode
-}
-
-func (wrapped wrappedUserCode[Wrapped]) Unwrapped() Wrapped {
-	return wrapped.UserCode
-}
-
-// UserWrap is a convenience that calls errors.Wrap but still returns the UserCode interface
-// If a nil UserCode is given it will be returned as nil
-func UserWrap[EC UserCode](errCode EC, msg string) UserCodeWrap[EC] {
-	err := errors.Wrap(errCode, msg)
-	if err == nil {
-		return nil
-	}
-	return wrappedUserCode[EC]{
-		Err:      err,
-		UserCode: errCode,
-	}
-}
-
-// UserWrapf is a convenience that calls errors.Wrapf but still returns the UserCode interface
-// If a nil UserCode is given it will be returned as nil
-func UserWrapf[EC UserCode](errCode EC, msg string, args ...interface{}) UserCodeWrap[EC] {
-	err := errors.Wrapf(errCode, msg, args...)
-	if err == nil {
-		return nil
-	}
-	return wrappedUserCode[EC]{
-		Err:      err,
-		UserCode: errCode,
-	}
-}
-
-// UserWraps is a convenience that calls errors.Wraps but still returns the UserCode interface
-// If a nil UserCode is given it will be returned as nil
-func UserWraps[EC UserCode](errCode EC, msg string, args ...interface{}) UserCodeWrap[EC] {
-	err := errors.Wraps(errCode, msg, args...)
-	if err == nil {
-		return nil
-	}
-	return wrappedUserCode[EC]{
-		Err:      err,
-		UserCode: errCode,
-	}
+	return UserMsgErrCode{Msg: msg, ErrorCode: err}
 }

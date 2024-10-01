@@ -13,13 +13,13 @@ import (
 )
 
 type ErrorCodeGoa struct {
-	errorCode errcode.ErrorCode
-	err       error
+	errcode.ErrorCode
+	err error
 }
 
 // fulfill GOA expectation
 func (ec ErrorCodeGoa) GoaErrorName() string {
-	return string(ec.errorCode.Code().CodeStr())
+	return string(ec.ErrorCode.Code().CodeStr())
 }
 
 // fulfill http.Statuser
@@ -32,10 +32,6 @@ func (ec ErrorCodeGoa) StatusCode() int {
 	return *httpCode
 }
 
-func (ec ErrorCodeGoa) Code() errcode.Code {
-	return ec.errorCode.Code()
-}
-
 func (ec ErrorCodeGoa) Error() string {
 	return ec.err.Error()
 }
@@ -45,7 +41,7 @@ func (ec ErrorCodeGoa) Unwrap() error {
 }
 
 func (ec ErrorCodeGoa) MarshalJSON() ([]byte, error) {
-	return json.Marshal(errcode.NewJSONFormat(ec.errorCode))
+	return json.Marshal(errcode.NewJSONFormat(ec.ErrorCode))
 }
 
 func AsErrorCodeGoa(err error) *ErrorCodeGoa {
@@ -57,7 +53,7 @@ func AsErrorCodeGoa(err error) *ErrorCodeGoa {
 	}
 	if errCode := errcode.CodeChain(err); errCode != nil {
 		return &ErrorCodeGoa{
-			errorCode: errCode,
+			ErrorCode: errCode,
 			err:       err,
 		}
 	}
@@ -67,7 +63,7 @@ func AsErrorCodeGoa(err error) *ErrorCodeGoa {
 
 func ErrorCodeToGoa(errCode errcode.ErrorCode) ErrorCodeGoa {
 	return ErrorCodeGoa{
-		errorCode: errCode,
+		ErrorCode: errCode,
 		err:       errCode,
 	}
 }
@@ -174,7 +170,8 @@ func ServiceErrorToErrorCode(err *goalib.ServiceError) ErrorCodeGoa {
 			errorForCode = EnumErr{err: err}
 		}
 	}
-	var errCode errcode.ErrorCode = errcode.NewCodedError(errorForCode, code)
+	coded := errcode.NewCodedError(errorForCode, code)
+	var errCode errcode.ErrorCode = &coded
 	return ErrorCodeToGoa(errCode)
 }
 
