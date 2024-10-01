@@ -51,17 +51,17 @@ func TestErrorCodeChain(t *testing.T) {
 	code := MinimalError{}
 	// AssertCodeChain(t, code, code)
 	ann := errors.Wrap(code, "added annotation")
-	AssertCodeChain(t, ann, errcode.ChainContext{Top: ann, ErrCode: code})
+	AssertCodeChain(t, ann, errcode.ChainContext{Top: ann, ErrorCode: code})
 	ann2 := errors.Wrap(ann, "another annotation")
-	AssertCodeChain(t, ann2, errcode.ChainContext{Top: ann2, ErrCode: code})
+	AssertCodeChain(t, ann2, errcode.ChainContext{Top: ann2, ErrorCode: code})
 
 	code2 := MinimalError{}
 	// horizontal composition
 	multiCode := errcode.Combine(code, code2)
 	annMultiCode := errors.Wrap(multiCode, "multi ann")
-	AssertCodeChain(t, annMultiCode, errcode.ChainContext{Top: annMultiCode, ErrCode: multiCode})
+	AssertCodeChain(t, annMultiCode, errcode.ChainContext{Top: annMultiCode, ErrorCode: multiCode})
 	multiErr := MultiErrors{Multi: []error{errors.New("ignore"), annMultiCode}}
-	AssertCodeChain(t, multiErr, errcode.ChainContext{Top: multiErr, ErrCode: errcode.ChainContext{Top: annMultiCode, ErrCode: multiCode}})
+	AssertCodeChain(t, multiErr, errcode.ChainContext{Top: multiErr, ErrorCode: errcode.ChainContext{Top: annMultiCode, ErrorCode: multiCode}})
 	// TODO: vertical composition
 }
 

@@ -35,6 +35,10 @@ func (e GRPCError) Code() errcode.Code {
 	return codeAborted
 }
 
+func (e GRPCError) WrapError(apply func(err error) error) {
+	panic("WrapError not implemented")
+}
+
 func TestGrpcErrorCode(t *testing.T) {
 	err := GRPCError{}
 	AssertGRPCCode(t, err, codes.Aborted)

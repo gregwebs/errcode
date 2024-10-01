@@ -115,6 +115,10 @@ func (e multiCode[Err]) Error() string {
 	return output
 }
 
+func (e multiCode[Err]) WrapError(apply func(err error) error) {
+	e.ErrCode.WrapError(apply)
+}
+
 // Errors fullfills the ErrorGroup inteface
 func (e multiCode[Err]) Errors() []error {
 	return append([]error{error(e.ErrCode)}, e.rest...)
@@ -172,7 +176,7 @@ func CodeChain(errInput error) ErrorCode {
 	err := errInput
 	for err != nil {
 		if errCode := checkError(err); errCode != nil {
-			return ChainContext{errInput, errCode}
+			return ChainContext{errCode, errInput}
 		}
 		err = errors.Unwrap(err)
 	}
@@ -185,13 +189,8 @@ func CodeChain(errInput error) ErrorCode {
 // If you annotated an ErrorCode with additional information, it is retained in the Top field.
 // The Top field is used for the Error() and Unwrap() methods.
 type ChainContext struct {
-	Top     error
-	ErrCode ErrorCode
-}
-
-// Code satisfies the ErrorCode interface
-func (err ChainContext) Code() Code {
-	return err.ErrCode.Code()
+	ErrorCode
+	Top error
 }
 
 // Error satisfies the Error interface
@@ -204,7 +203,7 @@ func (err ChainContext) Unwrap() error {
 	if wrapped := errors.Unwrap(err.Top); wrapped != nil {
 		return wrapped
 	}
-	return err.ErrCode
+	return err.ErrorCode
 }
 
 var _ ErrorCode = (*ChainContext)(nil)
@@ -215,8 +214,8 @@ func (err ChainContext) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			fmt.Fprintf(s, "%+v\n", err.ErrCode)
-			if errors.HasStack(err.ErrCode) {
+			fmt.Fprintf(s, "%+v\n", err.ErrorCode)
+			if errors.HasStack(err.ErrorCode) {
 				fmt.Fprintf(s, "%v", err.Top)
 			} else {
 				fmt.Fprintf(s, "%+v", err.Top)
@@ -224,14 +223,14 @@ func (err ChainContext) Format(s fmt.State, verb rune) {
 			return
 		}
 		if s.Flag('#') {
-			fmt.Fprintf(s, "ChainContext{Code: %#v, Top: %#v}", err.ErrCode, err.Top)
+			fmt.Fprintf(s, "ChainContext{Code: %#v, Top: %#v}", err.ErrorCode, err.Top)
 			return
 		}
 		fallthrough
 	case 's':
-		fmt.Fprintf(s, "Code: %s. Top Error: %s", err.ErrCode.Code().CodeStr(), err.Top)
+		fmt.Fprintf(s, "Code: %s. Top Error: %s", err.ErrorCode.Code().CodeStr(), err.Top)
 	case 'q':
-		fmt.Fprintf(s, "Code: %q. Top Error: %q", err.ErrCode.Code().CodeStr(), err.Top)
+		fmt.Fprintf(s, "Code: %q. Top Error: %q", err.ErrorCode.Code().CodeStr(), err.Top)
 	}
 }
 

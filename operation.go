@@ -54,28 +54,23 @@ func (e EmbedOp) GetOperation() string {
 // This can be conveniently constructed with Op() and AddTo() to record the operation information for the error.
 // However, it isn't required to be used, see the HasOperation documentation for alternatives.
 type OpErrCode struct {
+	ErrorCode
 	Operation string
-	Err       ErrorCode
 }
 
 // Unwrap satisfies the errors package Unwrap function
 func (e OpErrCode) Unwrap() error {
-	return e.Err
+	return e.ErrorCode
 }
 
 // Error prefixes the operation to the underlying Err Error.
 func (e OpErrCode) Error() string {
-	return e.Operation + ": " + e.Err.Error()
+	return e.Operation + ": " + e.ErrorCode.Error()
 }
 
 // GetOperation satisfies the HasOperation interface.
 func (e OpErrCode) GetOperation() string {
 	return e.Operation
-}
-
-// Code returns the underlying Code of Err.
-func (e OpErrCode) Code() Code {
-	return e.Err.Code()
 }
 
 var _ ErrorCode = (*OpErrCode)(nil)    // assert implements interface
@@ -102,6 +97,6 @@ func Op(operation string) AddOp {
 		if err == nil {
 			panic("Op error is nil")
 		}
-		return OpErrCode{Operation: operation, Err: err}
+		return OpErrCode{ErrorCode: err, Operation: operation}
 	}
 }

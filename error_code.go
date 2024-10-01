@@ -120,42 +120,30 @@ func (code Code) IsAncestor(ancestorCode Code) bool {
 	return nil != code.findAncestor(func(an Code) bool { return an == ancestorCode })
 }
 
-// ErrorCode is the interface that ties an error and RegisteredCode together.
+// ErrorCode is the interface that ties an error and Code together.
+// A Function that is not written in the context of an (HTTP) handler
+// can return a code that will eventually be sent back to the client.
 //
-// Note that there are additional interfaces (HasClientData, HasOperation, please see the docs)
+// Note that there are additional interfaces such as UserCode
 // that can be defined by an ErrorCode to customize finding structured data for the client.
 //
-// ErrorCode allows error codes to be defined
-// without being forced to use a particular struct such as CodedError.
-// CodedError is convenient for generic errors that wrap many different errors with similar codes.
-// Please see the docs for CodedError.
-// For an application specific error with a 1:1 mapping between a go error structure and a RegisteredCode,
-// You probably want to use this interface directly. Example:
-//
-//	// First define a normal error type
-//	type PathBlocked struct {
-//		start     uint64 `json:"start"`
-//		end       uint64 `json:"end"`
-//		obstacle  uint64 `json:"end"`
-//	}
-//
-//	func (e PathBlocked) Error() string {
-//		return fmt.Sprintf("The path %d -> %d has obstacle %d", e.start, e.end, e.obstacle)
-//	}
-//
-//	// Now define the code
-//	var PathBlockedCode = errcode.StateCode.Child("state.blocked")
-//
-//	// Now attach the code to the error type
-//	func (e PathBlocked) Code() Code {
-//		return PathBlockedCode
-//	}
+// The ErrorCode interface allows error codes to be defined.
+// without being forced to use a particular struct implementation such as CodedError.
+// However, CodedError is normally be used for generic error codes that wrap many different errors with the same code.
 type ErrorCode interface {
-	Code() Code
 	error
+	Code() Code
+	ErrorWrap
 }
 
-// unwrapper allows the abstract retrieval of the underlying error.
+// The WrapError method allows for modifying the inner error while maintaining the same outer type.
+// This is most useful when wrapping an extended ErrorCode interface such as UserCode.
+// These are used by the errcode.Wrap* functions.
+type ErrorWrap interface {
+	WrapError(func(error) error)
+}
+
+// unwrapError allows the abstract retrieval of the underlying error.
 // Formalize the Unwrap interface, but don't export it.
 // The standard library errors package should export it.
 // Types that wrap errors should implement this to allow viewing of the underlying error.
@@ -163,77 +151,40 @@ type unwrapError interface {
 	Unwrap() error
 }
 
-type Unwrapper[T any] interface {
-	Unwrapped() T
-}
-
-type ErrorCodeWrap[Wrap ErrorCode] interface {
-	ErrorCode
-	Unwrapper[Wrap]
-}
-
-// wrappedErrorCode is a convenience to maintain the ErrorCode type when wrapping errors
-type wrappedErrorCode[Wrapped ErrorCode] struct {
-	Err       error
-	ErrorCode Wrapped
-}
-
-// Code fulfills the ErrorCode interface
-func (wrapped wrappedErrorCode[Wrapped]) Code() Code {
-	return wrapped.ErrorCode.Code()
-}
-
-// Error fulfills the ErrorCode interface
-func (wrapped wrappedErrorCode[Wrapped]) Error() string {
-	return wrapped.Err.Error()
-}
-
-// Allow unwrapping
-func (wrapped wrappedErrorCode[Wrapped]) Unwrap() error {
-	return wrapped.ErrorCode
-}
-
-func (wrapped wrappedErrorCode[Wrapped]) Unwrapped() Wrapped {
-	return wrapped.ErrorCode
-}
-
-// Wrap is a convenience that calls errors.Wrap but still returns the ErrorCode interface
-// If a nil ErrorCode is given it will be returned as nil
-func Wrap[EC ErrorCode](errCode EC, msg string) ErrorCodeWrap[EC] {
-	err := errors.Wrap(errCode, msg)
-	if err == nil {
-		return nil
+// Wrap calls errors.Wrap on the inner error.
+// This uses the WrapError method of ErrorWrap
+// If a nil is given it is a noop
+func Wrap(errCode ErrorWrap, msg string) {
+	if errCode == nil {
+		return
 	}
-	return wrappedErrorCode[EC]{
-		Err:       err,
-		ErrorCode: errCode,
-	}
+	errCode.WrapError(func(err error) error {
+		return errors.Wrap(err, msg)
+	})
 }
 
-// Wrapf is a convenience that calls errors.Wrapf but still returns the ErrorCode interface
-// If a nil ErrorCode is given it will be returned as nil
-func Wrapf[EC ErrorCode](errCode EC, msg string, args ...interface{}) ErrorCodeWrap[EC] {
-	err := errors.Wrapf(errCode, msg, args...)
-	if err == nil {
-		return nil
+// Wrapf calls errors.Wrapf on the inner error.
+// This uses the WrapError method of ErrorWrap
+// If a nil is given it is a noop
+func Wrapf(errCode ErrorWrap, msg string, args ...interface{}) {
+	if errCode == nil {
+		return
 	}
-	return wrappedErrorCode[EC]{
-		Err:       err,
-		ErrorCode: errCode,
-	}
+	errCode.WrapError(func(err error) error {
+		return errors.Wrapf(err, msg, args...)
+	})
 }
 
-// Wraps is a convenience that calls errors.Wraps but still returns the ErrorCode interface
-// If a nil ErrorCode is given it will be returned as nil
-func Wraps[EC ErrorCode](errCode EC, msg string, args ...interface{}) ErrorCodeWrap[EC] {
-	err := errors.Wraps(errCode, msg, args...)
-	if err == nil {
-		return nil
+// Wraps calls errors.Wraps on the inner error.
+// This uses the WrapError method of ErrorWrap
+// If a nil is given it is a noop
+func Wraps(errCode ErrorWrap, msg string, args ...interface{}) {
+	if errCode == nil {
+		return
 	}
-	return wrappedErrorCode[EC]{
-		Err:       err,
-		ErrorCode: errCode,
-	}
+	errCode.WrapError(func(err error) error {
+		return errors.Wraps(err, msg, args...)
+	})
 }
 
 // HasClientData is used to defined how to retrieve the data portion of an ErrorCode to be returned to the client.

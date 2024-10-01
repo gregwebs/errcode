@@ -81,6 +81,10 @@ type CodedError struct {
 	Err     error
 }
 
+func (ce *CodedError) WrapError(apply func(error) error) {
+	ce.Err = apply(ce.Err)
+}
+
 // NewCodedError is for constructing broad error kinds (e.g. those representing HTTP codes)
 // Which could have many different underlying go errors.
 // Eventually you may want to give your go errors more specific codes.
@@ -100,6 +104,7 @@ func NewCodedError(err error, code Code) CodedError {
 
 var _ ErrorCode = (*CodedError)(nil)   // assert implements interface
 var _ unwrapError = (*CodedError)(nil) // assert implements interface
+var _ ErrorWrap = (*CodedError)(nil)   // assert implements interface
 
 func (e CodedError) Error() string {
 	return e.Err.Error()
@@ -116,26 +121,28 @@ func (e CodedError) Code() Code {
 }
 
 // invalidInputErr gives the code InvalidInputCode.
-type invalidInputErr struct{ CodedError }
+type invalidInputErr struct{ *CodedError }
 
 // NewInvalidInputErr creates an invalidInputErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use InvalidInputCode which gives HTTP 400.
 func NewInvalidInputErr(err error) ErrorCode {
-	return invalidInputErr{NewCodedError(err, InvalidInputCode)}
+	coded := NewCodedError(err, InvalidInputCode)
+	return invalidInputErr{&coded}
 }
 
 var _ ErrorCode = (*invalidInputErr)(nil)   // assert implements interface
 var _ unwrapError = (*invalidInputErr)(nil) // assert implements interface
 
 // badReqeustErr gives the code BadRequestErr.
-type BadRequestErr struct{ CodedError }
+type BadRequestErr struct{ *CodedError }
 
 // NewBadRequestErr creates a BadReqeustErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use BadRequestCode which gives HTTP 400.
 func NewBadRequestErr(err error) BadRequestErr {
-	return BadRequestErr{NewCodedError(err, InvalidInputCode)}
+	coded := NewCodedError(err, InvalidInputCode)
+	return BadRequestErr{&coded}
 }
 
 // InternalErr gives the code InternalCode
@@ -171,7 +178,7 @@ func makeInternalStackCode(defaultCode Code) func(error) StackCode {
 				code = errCode
 			}
 		}
-		return NewStackCode(CodedError{GetCode: code, Err: err}, 3)
+		return NewStackCode(&CodedError{GetCode: code, Err: err}, 3)
 	}
 }
 
@@ -202,89 +209,97 @@ func NewUnavailableErr(err error) UnavailableErr {
 }
 
 // notFound gives the code NotFoundCode.
-type NotFoundErr struct{ CodedError }
+type NotFoundErr struct{ *CodedError }
 
 // NewNotFoundErr creates a notFound from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use NotFoundCode which gives HTTP 404.
 func NewNotFoundErr(err error) NotFoundErr {
-	return NotFoundErr{NewCodedError(err, NotFoundCode)}
+	coded := NewCodedError(err, NotFoundCode)
+	return NotFoundErr{&coded}
 }
 
 var _ ErrorCode = (*NotFoundErr)(nil)   // assert implements interface
 var _ unwrapError = (*NotFoundErr)(nil) // assert implements interface
 
 // NotAuthenticatedErr gives the code NotAuthenticatedCode.
-type NotAuthenticatedErr struct{ CodedError }
+type NotAuthenticatedErr struct{ *CodedError }
 
 // NewNotAuthenticatedErr creates a NotAuthenticatedErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use NotAuthenticatedCode which gives HTTP 401.
 func NewNotAuthenticatedErr(err error) NotAuthenticatedErr {
-	return NotAuthenticatedErr{NewCodedError(err, NotAuthenticatedCode)}
+	coded := NewCodedError(err, NotAuthenticatedCode)
+	return NotAuthenticatedErr{&coded}
 }
 
 var _ ErrorCode = (*NotAuthenticatedErr)(nil)   // assert implements interface
 var _ unwrapError = (*NotAuthenticatedErr)(nil) // assert implements interface
 
 // ForbiddenErr gives the code ForbiddenCode.
-type ForbiddenErr struct{ CodedError }
+type ForbiddenErr struct{ *CodedError }
 
 // NewForbiddenErr creates a ForbiddenErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use ForbiddenCode which gives HTTP 401.
 func NewForbiddenErr(err error) ForbiddenErr {
-	return ForbiddenErr{NewCodedError(err, ForbiddenCode)}
+	coded := NewCodedError(err, ForbiddenCode)
+	return ForbiddenErr{&coded}
 }
 
 var _ ErrorCode = (*ForbiddenErr)(nil)   // assert implements interface
 var _ unwrapError = (*ForbiddenErr)(nil) // assert implements interface
 
 // UnprocessableErr gives the code UnprocessibleCode.
-type UnprocessableErr struct{ CodedError }
+type UnprocessableErr struct{ *CodedError }
 
 // NewUnprocessableErr creates an UnprocessableErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use UnprocessableEntityCode which gives HTTP 422.
 func NewUnprocessableErr(err error) UnprocessableErr {
-	return UnprocessableErr{NewCodedError(err, UnprocessableEntityCode)}
+	coded := NewCodedError(err, UnprocessableEntityCode)
+	return UnprocessableErr{&coded}
 }
 
 // NotAcceptableErr gives the code NotAcceptableCode.
-type NotAcceptableErr struct{ CodedError }
+type NotAcceptableErr struct{ *CodedError }
 
 // NewUnprocessableErr creates an UnprocessableErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use NotAcceptableCode which gives HTTP 406.
 func NewNotAcceptableErr(err error) NotAcceptableErr {
-	return NotAcceptableErr{NewCodedError(err, NotAcceptableCode)}
+	coded := NewCodedError(err, NotAcceptableCode)
+	return NotAcceptableErr{&coded}
 }
 
-type AlreadyExistsErr struct{ CodedError }
+type AlreadyExistsErr struct{ *CodedError }
 
 // NewAlreadyExistsErr creates an AlreadyExistsErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use AlreadyExistsCode which gives HTTP 409.
 func NewAlreadyExistsErr(err error) AlreadyExistsErr {
-	return AlreadyExistsErr{NewCodedError(err, AlreadyExistsCode)}
+	coded := NewCodedError(err, AlreadyExistsCode)
+	return AlreadyExistsErr{&coded}
 }
 
 // TimeoutGatewayErr gives the code TimeoutGatewayCode
-type TimeoutGatewayErr struct{ CodedError }
+type TimeoutGatewayErr struct{ *CodedError }
 
 // NewTimeoutGatewayErr creates a TimeoutGatewayErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use TimeoutGatewayErr which gives HTTP 504.
 func NewTimeoutGatewayErr(err error) TimeoutGatewayErr {
-	return TimeoutGatewayErr{NewCodedError(err, TimeoutGatewayCode)}
+	coded := NewCodedError(err, TimeoutGatewayCode)
+	return TimeoutGatewayErr{&coded}
 }
 
 // TimeoutRequestErr gives the code TimeoutRequestCode
-type TimeoutRequestErr struct{ CodedError }
+type TimeoutRequestErr struct{ *CodedError }
 
 // NewTimeoutRequestErr creates a TimeoutRequestErr from an err.
 // If the error is already an ErrorCode it will use that code.
 // Otherwise it will use TimeoutRequestErr which gives HTTP 408.
 func NewTimeoutRequestErr(err error) TimeoutRequestErr {
-	return TimeoutRequestErr{NewCodedError(err, TimeoutRequestCode)}
+	coded := NewCodedError(err, TimeoutRequestCode)
+	return TimeoutRequestErr{&coded}
 }

@@ -24,20 +24,19 @@ import (
 )
 
 // Test setting the HTTP code
-type HTTPError struct{}
-
-func (e HTTPError) Error() string { return "error" }
-
 const httpCodeStr = "input.http"
 
 var codeHTTP900 = errcode.InvalidInputCode.Child(httpCodeStr).SetHTTP(900)
 
-func (e HTTPError) Code() errcode.Code {
-	return codeHTTP900
+type HTTPError struct{ *errcode.CodedError }
+
+func NewHTTPError(err error) HTTPError {
+	coded := errcode.NewCodedError(err, codeHTTP900)
+	return HTTPError{&coded}
 }
 
 func TestHttpErrorCode(t *testing.T) {
-	http := HTTPError{}
+	http := NewHTTPError(errors.New("error"))
 	AssertHTTPCode(t, http, 900)
 	ErrorEquals(t, http, "error")
 	ClientDataEquals(t, http, nil, httpCodeStr)
@@ -46,15 +45,15 @@ func TestHttpErrorCode(t *testing.T) {
 // Test a very simple error
 type MinimalError struct{}
 
-func (e MinimalError) Error() string { return "error" }
+func (e MinimalError) Error() string                         { return "error" }
+func (e MinimalError) Code() errcode.Code                    { return registeredCode }
+func (e MinimalError) WrapError(apply func(err error) error) {}
 
 var _ errcode.ErrorCode = (*MinimalError)(nil) // assert implements interface
 
 const codeString errcode.CodeStr = "input.testcode"
 
 var registeredCode errcode.Code = errcode.InvalidInputCode.Child(codeString)
-
-func (e MinimalError) Code() errcode.Code { return registeredCode }
 
 func TestMinimalErrorCode(t *testing.T) {
 	minimal := MinimalError{}
@@ -68,16 +67,18 @@ func TestMinimalErrorCode(t *testing.T) {
 // We don't prevent duplicate codes
 var childPathOnlyCode errcode.Code = errcode.InvalidInputCode.Child("testcode")
 
-type ChildOnlyError struct{}
-
-func (e ChildOnlyError) Error() string { return "error" }
+type ChildOnlyError struct{ *errcode.CodedError }
 
 var _ errcode.ErrorCode = (*ChildOnlyError)(nil) // assert implements interface
 
+func NewChildOnlyError(err error) ChildOnlyError {
+	coded := errcode.NewCodedError(err, childPathOnlyCode)
+	return ChildOnlyError{&coded}
+}
 func (e ChildOnlyError) Code() errcode.Code { return childPathOnlyCode }
 
 func TestChildOnlyErrorCode(t *testing.T) {
-	coe := ChildOnlyError{}
+	coe := NewChildOnlyError(errors.New("error"))
 	AssertCodes(t, coe)
 	ErrorEquals(t, coe, "error")
 	ClientDataEqualsDef(t, coe, nil)
@@ -94,7 +95,8 @@ const topCodeStr errcode.CodeStr = "top"
 
 var topCode errcode.Code = errcode.NewCode(topCodeStr)
 
-func (e TopError) Code() errcode.Code { return topCode }
+func (e TopError) Code() errcode.Code                    { return topCode }
+func (e TopError) WrapError(apply func(err error) error) {}
 
 func TestTopErrorCode(t *testing.T) {
 	top := TopError{}
@@ -115,7 +117,8 @@ const deepCodeStr errcode.CodeStr = "input.testcode.very.very.deep"
 var intermediateCode = registeredCode.Child("input.testcode.very").SetHTTP(800)
 var deepCode errcode.Code = intermediateCode.Child("input.testcode.very.very").Child(deepCodeStr)
 
-func (e DeepError) Code() errcode.Code { return deepCode }
+func (e DeepError) Code() errcode.Code                    { return deepCode }
+func (e DeepError) WrapError(apply func(err error) error) {}
 
 func TestDeepErrorCode(t *testing.T) {
 	deep := DeepError{}
@@ -143,6 +146,12 @@ func (e ErrorWrapper) GetClientData() interface{} {
 func (e ErrorWrapper) Unwrap() error {
 	return e.Err
 }
+func (e *ErrorWrapper) WrapError(apply func(err error) error) {
+	e.Err = apply(e.Err)
+}
+
+var _ errcode.ErrorCode = (*ErrorWrapper)(nil) // assert implements interface
+var _ errcode.ErrorWrap = (*ErrorWrapper)(nil) // assert implements interface
 
 type Struct1 struct{ A string }
 type StructConstError1 struct{ A string }
@@ -165,134 +174,68 @@ func (e Struct2) Error() string {
 }
 
 func TestErrorWrapperCode(t *testing.T) {
-	wrapped := ErrorWrapper{Err: errors.New("error")}
+	wrapped := &ErrorWrapper{Err: errors.New("error")}
 	AssertCodes(t, wrapped)
 	ErrorEquals(t, wrapped, "error")
 	ClientDataEqualsDef(t, wrapped, errors.New("error"))
 	s2 := Struct2{A: "A", B: "B"}
-	wrappedS2 := ErrorWrapper{Err: s2}
+	wrappedS2 := &ErrorWrapper{Err: s2}
 	AssertCodes(t, wrappedS2)
 	ErrorEquals(t, wrappedS2, "error A & B A & B")
 	ClientDataEqualsDef(t, wrappedS2, s2)
 	s1 := Struct1{A: "A"}
-	ClientDataEqualsDef(t, ErrorWrapper{Err: s1}, s1)
+	ClientDataEqualsDef(t, &ErrorWrapper{Err: s1}, s1)
 	sconst := StructConstError1{A: "A"}
-	ClientDataEqualsDef(t, ErrorWrapper{Err: sconst}, sconst)
+	ClientDataEqualsDef(t, &ErrorWrapper{Err: sconst}, sconst)
 }
 
 func TestErrorWrapperNil(t *testing.T) {
-	if errcode.Wrap[errcode.ErrorCode](nil, "wrapped") != nil {
-		t.Errorf("not nil")
-	}
-	if errcode.Wrapf[errcode.ErrorCode](nil, "wrapped") != nil {
-		t.Errorf("not nil")
-	}
-	if errcode.Wraps[errcode.ErrorCode](nil, "wrapped") != nil {
-		t.Errorf("not nil")
-	}
-	if errcode.UserWrap[errcode.UserCode](nil, "wrapped") != nil {
-		t.Errorf("not nil")
-	}
-	if errcode.UserWrapf[errcode.UserCode](nil, "wrapped") != nil {
-		t.Errorf("not nil")
-	}
-	if errcode.UserWraps[errcode.UserCode](nil, "wrapped") != nil {
-		t.Errorf("not nil")
-	}
+	// Don't panic!
+	errcode.Wrap(nil, "wrapped")
+	errcode.Wrapf(nil, "wrapped")
+	errcode.Wraps(nil, "wrapped")
 }
 
 func TestErrorWrapperFunctions(t *testing.T) {
 	underlying := errors.New("underlying")
-	coded := errcode.NewBadRequestErr(underlying)
-	AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
 
 	{
-		wrap := errcode.Wrap(coded, "wrapped")
-		AssertCode(t, wrap, errcode.InvalidInputCode.CodeStr())
-		if errMsg := wrap.Error(); errMsg != "wrapped: underlying" {
+		coded := errcode.NewBadRequestErr(underlying)
+		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
+		errcode.Wrap(coded, "wrapped")
+		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
+		if errMsg := coded.Error(); errMsg != "wrapped: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		if errors.Unwrap(wrap).Error() != underlying.Error() {
-			t.Errorf("bad unwrap %+v", errors.Unwrap(wrap))
-		}
-		if wrap.Unwrapped() != coded {
-			t.Errorf("bad unwrapped")
+		doubleUnwrap := errors.Unwrap(coded.Unwrap())
+		if doubleUnwrap.Error() != underlying.Error() {
+			t.Errorf("bad unwrap %+v", doubleUnwrap)
 		}
 	}
 
 	{
-		wrapf := errcode.Wrapf(coded, "wrapped %s", "arg")
-		AssertCode(t, wrapf, errcode.InvalidInputCode.CodeStr())
-		if errMsg := wrapf.Error(); errMsg != "wrapped arg: underlying" {
+		coded := errcode.NewBadRequestErr(underlying)
+		errcode.Wrapf(coded, "wrapped %s", "arg")
+		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
+		if errMsg := coded.Error(); errMsg != "wrapped arg: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		if errors.Unwrap(wrapf).Error() != underlying.Error() {
-			t.Errorf("bad unwrap %+v", errors.Unwrap(wrapf))
-		}
-		if wrapf.Unwrapped() != coded {
-			t.Errorf("bad unwrapped")
+		doubleUnwrap := errors.Unwrap(coded.Unwrap())
+		if doubleUnwrap.Error() != underlying.Error() {
+			t.Errorf("bad unwrap %+v", doubleUnwrap)
 		}
 	}
 
 	{
-		wraps := errcode.Wraps(coded, "wrapped", "arg", 1)
-		AssertCode(t, wraps, errcode.InvalidInputCode.CodeStr())
-		if errMsg := wraps.Error(); errMsg != "wrapped arg=1: underlying" {
+		coded := errcode.NewBadRequestErr(underlying)
+		errcode.Wraps(coded, "wrapped", "arg", 1)
+		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
+		if errMsg := coded.Error(); errMsg != "wrapped arg=1: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		if errors.Unwrap(wraps).Error() != underlying.Error() {
-			t.Errorf("bad unwrap %+v", errors.Unwrap(wraps))
-		}
-		if wraps.Unwrapped() != coded {
-			t.Errorf("bad unwrapped")
-		}
-	}
-}
-
-func TestUserWrapperFunctions(t *testing.T) {
-	underlying := errors.New("underlying")
-	ec := errcode.NewBadRequestErr(underlying)
-	coded := errcode.WithUserMsg("user", ec)
-	AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-	{
-		wrap := errcode.UserWrap(coded, "wrapped")
-		AssertCode(t, wrap, errcode.InvalidInputCode.CodeStr())
-		if errMsg := wrap.Error(); errMsg != "wrapped: user: underlying" {
-			t.Errorf("Wrap unexpected: %s", errMsg)
-		}
-		if errors.Unwrap(wrap).Error() != coded.Error() {
-			t.Errorf("bad unwrap %+v", errors.Unwrap(wrap))
-		}
-		if wrap.Unwrapped() != coded {
-			t.Errorf("bad unwrapped")
-		}
-	}
-
-	{
-		wrapf := errcode.UserWrapf(coded, "wrapped %s", "arg")
-		AssertCode(t, wrapf, errcode.InvalidInputCode.CodeStr())
-		if errMsg := wrapf.Error(); errMsg != "wrapped arg: user: underlying" {
-			t.Errorf("Wrap unexpected: %s", errMsg)
-		}
-		if errors.Unwrap(wrapf).Error() != coded.Error() {
-			t.Errorf("bad unwrap %+v", errors.Unwrap(wrapf))
-		}
-		if wrapf.Unwrapped() != coded {
-			t.Errorf("bad unwrapped")
-		}
-	}
-
-	{
-		wraps := errcode.UserWraps(coded, "wrapped", "arg", 1)
-		AssertCode(t, wraps, errcode.InvalidInputCode.CodeStr())
-		if errMsg := wraps.Error(); errMsg != "wrapped arg=1: user: underlying" {
-			t.Errorf("Wrap unexpected: %s", errMsg)
-		}
-		if errors.Unwrap(wraps).Error() != coded.Error() {
-			t.Errorf("bad unwrap %+v", errors.Unwrap(wraps))
-		}
-		if wraps.Unwrapped() != coded {
-			t.Errorf("bad unwrapped")
+		doubleUnwrap := errors.Unwrap(coded.Unwrap())
+		if doubleUnwrap.Error() != underlying.Error() {
+			t.Errorf("bad unwrap %+v", doubleUnwrap)
 		}
 	}
 }
@@ -302,8 +245,9 @@ var internalChild = errcode.InternalCode.Child("internal.child").SetHTTP(503).Ch
 
 type InternalChild struct{}
 
-func (ic InternalChild) Error() string      { return "internal child error" }
-func (ic InternalChild) Code() errcode.Code { return internalChild }
+func (ic InternalChild) Error() string                         { return "internal child error" }
+func (ic InternalChild) Code() errcode.Code                    { return internalChild }
+func (ic InternalChild) WrapError(apply func(err error) error) {}
 
 func TestNewInvalidInputErr(t *testing.T) {
 	var err errcode.ErrorCode
@@ -424,18 +368,18 @@ func TestOpErrorCode(t *testing.T) {
 	OpEquals(t, opEmpty.AddTo(MinimalError{}), "")
 	OpEquals(t, op.AddTo(MinimalError{}), "modify")
 
-	OpEquals(t, ErrorWrapper{Err: has}, "has")
-	OpEquals(t, ErrorWrapper{Err: OpErrorEmbed{EmbedOp: errcode.EmbedOp{Op: "field"}}}, "field")
+	OpEquals(t, &ErrorWrapper{Err: has}, "has")
+	OpEquals(t, &ErrorWrapper{Err: OpErrorEmbed{EmbedOp: errcode.EmbedOp{Op: "field"}}}, "field")
 
-	opErrCode := errcode.OpErrCode{Operation: "opcode", Err: MinimalError{}}
+	opErrCode := errcode.OpErrCode{Operation: "opcode", ErrorCode: MinimalError{}}
 	AssertOperation(t, opErrCode, "opcode")
 	OpEquals(t, opErrCode, "opcode")
 
-	OpEquals(t, ErrorWrapper{Err: opErrCode}, "opcode")
-	wrappedHas := ErrorWrapper{Err: errcode.OpErrCode{Operation: "opcode", Err: has}}
+	OpEquals(t, &ErrorWrapper{Err: opErrCode}, "opcode")
+	wrappedHas := &ErrorWrapper{Err: errcode.OpErrCode{Operation: "opcode", ErrorCode: has}}
 	AssertOperation(t, wrappedHas, "opcode")
 	OpEquals(t, wrappedHas, "opcode")
-	OpEquals(t, errcode.OpErrCode{Operation: "opcode", Err: has}, "opcode")
+	OpEquals(t, errcode.OpErrCode{Operation: "opcode", ErrorCode: has}, "opcode")
 }
 
 /*
@@ -476,18 +420,18 @@ func TestUserMsg(t *testing.T) {
 		t.Errorf("expected nil")
 	}
 
-	UserMsgEquals(t, ErrorWrapper{Err: ue}, "user")
-	UserMsgEquals(t, ErrorWrapper{Err: UserMsgErrorEmbed{EmbedUserMsg: errcode.EmbedUserMsg{Msg: "field"}}}, "field")
+	UserMsgEquals(t, &ErrorWrapper{Err: ue}, "user")
+	UserMsgEquals(t, &ErrorWrapper{Err: UserMsgErrorEmbed{EmbedUserMsg: errcode.EmbedUserMsg{Msg: "field"}}}, "field")
 
-	msgErrCode := errcode.UserMsgErrCode{Msg: "msg", Err: MinimalError{}}
+	msgErrCode := errcode.UserMsgErrCode{Msg: "msg", ErrorCode: MinimalError{}}
 	AssertUserMsg(t, msgErrCode, "msg")
 	UserMsgEquals(t, msgErrCode, "msg")
 
-	UserMsgEquals(t, ErrorWrapper{Err: msgErrCode}, "msg")
-	wrappedUser := ErrorWrapper{Err: errcode.UserMsgErrCode{Msg: "msg", Err: ue}}
+	UserMsgEquals(t, &ErrorWrapper{Err: msgErrCode}, "msg")
+	wrappedUser := &ErrorWrapper{Err: errcode.UserMsgErrCode{Msg: "msg", ErrorCode: ue}}
 	AssertUserMsg(t, wrappedUser, "msg")
 	UserMsgEquals(t, wrappedUser, "msg")
-	UserMsgEquals(t, errcode.UserMsgErrCode{Msg: "msg", Err: ue}, "msg")
+	UserMsgEquals(t, errcode.UserMsgErrCode{Msg: "msg", ErrorCode: ue}, "msg")
 }
 
 func AssertCodes(t *testing.T, code errcode.ErrorCode, codeStrs ...errcode.CodeStr) {
