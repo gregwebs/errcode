@@ -23,6 +23,7 @@ import (
 // It first calls the Errors function.
 func ErrorCodes(err error) []ErrorCode {
 	errorCodes := make([]ErrorCode, 0)
+	//nolint:staticcheck
 	errors.WalkDeep(err, func(err error) bool {
 		if errcode, ok := err.(ErrorCode); ok {
 			// avoid duplicating codes
