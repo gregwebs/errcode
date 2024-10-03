@@ -116,10 +116,6 @@ func (e multiCode[Err]) Error() string {
 	return output
 }
 
-func (e multiCode[Err]) WrapError(apply func(err error) error) {
-	e.ErrCode.WrapError(apply)
-}
-
 // Errors fullfills the ErrorGroup inteface
 func (e multiCode[Err]) Errors() []error {
 	return append([]error{error(e.ErrCode)}, e.rest...)
