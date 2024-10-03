@@ -45,9 +45,8 @@ func TestHttpErrorCode(t *testing.T) {
 // Test a very simple error
 type MinimalError struct{}
 
-func (e MinimalError) Error() string                         { return "error" }
-func (e MinimalError) Code() errcode.Code                    { return registeredCode }
-func (e MinimalError) WrapError(apply func(err error) error) {}
+func (e MinimalError) Error() string      { return "error" }
+func (e MinimalError) Code() errcode.Code { return registeredCode }
 
 var _ errcode.ErrorCode = (*MinimalError)(nil) // assert implements interface
 
@@ -95,8 +94,7 @@ const topCodeStr errcode.CodeStr = "top"
 
 var topCode errcode.Code = errcode.NewCode(topCodeStr)
 
-func (e TopError) Code() errcode.Code                    { return topCode }
-func (e TopError) WrapError(apply func(err error) error) {}
+func (e TopError) Code() errcode.Code { return topCode }
 
 func TestTopErrorCode(t *testing.T) {
 	top := TopError{}
@@ -117,8 +115,7 @@ const deepCodeStr errcode.CodeStr = "input.testcode.very.very.deep"
 var intermediateCode = registeredCode.Child("input.testcode.very").SetHTTP(800)
 var deepCode errcode.Code = intermediateCode.Child("input.testcode.very.very").Child(deepCodeStr)
 
-func (e DeepError) Code() errcode.Code                    { return deepCode }
-func (e DeepError) WrapError(apply func(err error) error) {}
+func (e DeepError) Code() errcode.Code { return deepCode }
 
 func TestDeepErrorCode(t *testing.T) {
 	deep := DeepError{}
@@ -150,8 +147,8 @@ func (e *ErrorWrapper) WrapError(apply func(err error) error) {
 	e.Err = apply(e.Err)
 }
 
-var _ errcode.ErrorCode = (*ErrorWrapper)(nil) // assert implements interface
-var _ errcode.ErrorWrap = (*ErrorWrapper)(nil) // assert implements interface
+var _ errcode.ErrorCode = (*ErrorWrapper)(nil)   // assert implements interface
+var _ errors.ErrorWrapper = (*ErrorWrapper)(nil) // assert implements interface
 
 type Struct1 struct{ A string }
 type StructConstError1 struct{ A string }
@@ -189,65 +186,13 @@ func TestErrorWrapperCode(t *testing.T) {
 	ClientDataEqualsDef(t, &ErrorWrapper{Err: sconst}, sconst)
 }
 
-func TestErrorWrapperNil(t *testing.T) {
-	// Don't panic!
-	errcode.Wrap(nil, "wrapped")
-	errcode.Wrapf(nil, "wrapped")
-	errcode.Wraps(nil, "wrapped")
-}
-
-func TestErrorWrapperFunctions(t *testing.T) {
-	underlying := errors.New("underlying")
-
-	{
-		coded := errcode.NewBadRequestErr(underlying)
-		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		errcode.Wrap(coded, "wrapped")
-		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		if errMsg := coded.Error(); errMsg != "wrapped: underlying" {
-			t.Errorf("Wrap unexpected: %s", errMsg)
-		}
-		doubleUnwrap := errors.Unwrap(coded.Unwrap())
-		if doubleUnwrap.Error() != underlying.Error() {
-			t.Errorf("bad unwrap %+v", doubleUnwrap)
-		}
-	}
-
-	{
-		coded := errcode.NewBadRequestErr(underlying)
-		errcode.Wrapf(coded, "wrapped %s", "arg")
-		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		if errMsg := coded.Error(); errMsg != "wrapped arg: underlying" {
-			t.Errorf("Wrap unexpected: %s", errMsg)
-		}
-		doubleUnwrap := errors.Unwrap(coded.Unwrap())
-		if doubleUnwrap.Error() != underlying.Error() {
-			t.Errorf("bad unwrap %+v", doubleUnwrap)
-		}
-	}
-
-	{
-		coded := errcode.NewBadRequestErr(underlying)
-		errcode.Wraps(coded, "wrapped", "arg", 1)
-		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		if errMsg := coded.Error(); errMsg != "wrapped arg=1: underlying" {
-			t.Errorf("Wrap unexpected: %s", errMsg)
-		}
-		doubleUnwrap := errors.Unwrap(coded.Unwrap())
-		if doubleUnwrap.Error() != underlying.Error() {
-			t.Errorf("bad unwrap %+v", doubleUnwrap)
-		}
-	}
-}
-
 var internalChildCodeStr errcode.CodeStr = "internal.child.granchild"
 var internalChild = errcode.InternalCode.Child("internal.child").SetHTTP(503).Child(internalChildCodeStr)
 
 type InternalChild struct{}
 
-func (ic InternalChild) Error() string                         { return "internal child error" }
-func (ic InternalChild) Code() errcode.Code                    { return internalChild }
-func (ic InternalChild) WrapError(apply func(err error) error) {}
+func (ic InternalChild) Error() string      { return "internal child error" }
+func (ic InternalChild) Code() errcode.Code { return internalChild }
 
 func TestNewInvalidInputErr(t *testing.T) {
 	var err errcode.ErrorCode
@@ -371,15 +316,16 @@ func TestOpErrorCode(t *testing.T) {
 	OpEquals(t, &ErrorWrapper{Err: has}, "has")
 	OpEquals(t, &ErrorWrapper{Err: OpErrorEmbed{EmbedOp: errcode.EmbedOp{Op: "field"}}}, "field")
 
-	opErrCode := errcode.OpErrCode{Operation: "opcode", ErrorCode: MinimalError{}}
+	opErrCode := errcode.Op("opcode").AddTo(MinimalError{})
 	AssertOperation(t, opErrCode, "opcode")
 	OpEquals(t, opErrCode, "opcode")
 
 	OpEquals(t, &ErrorWrapper{Err: opErrCode}, "opcode")
-	wrappedHas := &ErrorWrapper{Err: errcode.OpErrCode{Operation: "opcode", ErrorCode: has}}
+	opErrCode = errcode.Op("opcode").AddTo(has)
+	wrappedHas := &ErrorWrapper{Err: opErrCode}
 	AssertOperation(t, wrappedHas, "opcode")
 	OpEquals(t, wrappedHas, "opcode")
-	OpEquals(t, errcode.OpErrCode{Operation: "opcode", ErrorCode: has}, "opcode")
+	OpEquals(t, opErrCode, "opcode")
 }
 
 /*

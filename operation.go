@@ -50,12 +50,17 @@ func (e EmbedOp) GetOperation() string {
 	return e.Op
 }
 
+type OpCode interface {
+	ErrorCode
+	HasOperation
+}
+
 // OpErrCode is an ErrorCode with an Operation field attached.
 // This can be conveniently constructed with Op() and AddTo() to record the operation information for the error.
 // However, it isn't required to be used, see the HasOperation documentation for alternatives.
 type OpErrCode struct {
 	ErrorCode
-	Operation string
+	EmbedOp
 }
 
 // Unwrap satisfies the errors package Unwrap function
@@ -65,16 +70,12 @@ func (e OpErrCode) Unwrap() error {
 
 // Error prefixes the operation to the underlying Err Error.
 func (e OpErrCode) Error() string {
-	return e.Operation + ": " + e.ErrorCode.Error()
-}
-
-// GetOperation satisfies the HasOperation interface.
-func (e OpErrCode) GetOperation() string {
-	return e.Operation
+	return e.Op + ": " + e.ErrorCode.Error()
 }
 
 var _ ErrorCode = (*OpErrCode)(nil)    // assert implements interface
 var _ HasOperation = (*OpErrCode)(nil) // assert implements interface
+var _ OpCode = (*OpErrCode)(nil)       // assert implements interface
 var _ unwrapError = (*OpErrCode)(nil)  // assert implements interface
 
 // AddOp is constructed by Op. It allows method chaining with AddTo.
@@ -95,8 +96,11 @@ func (addOp AddOp) AddTo(err ErrorCode) OpErrCode {
 func Op(operation string) AddOp {
 	return func(err ErrorCode) OpErrCode {
 		if err == nil {
-			panic("Op error is nil")
+			panic("Op errorcode is nil")
 		}
-		return OpErrCode{ErrorCode: err, Operation: operation}
+		return OpErrCode{
+			ErrorCode: err,
+			EmbedOp:   EmbedOp{Op: operation},
+		}
 	}
 }

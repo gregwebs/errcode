@@ -45,8 +45,6 @@ package errcode
 import (
 	"fmt"
 	"strings"
-
-	"github.com/gregwebs/errors"
 )
 
 // CodeStr is the name of the error code.
@@ -133,58 +131,6 @@ func (code Code) IsAncestor(ancestorCode Code) bool {
 type ErrorCode interface {
 	error
 	Code() Code
-	ErrorWrap
-}
-
-// The WrapError method allows for modifying the inner error while maintaining the same outer type.
-// This is most useful when wrapping an extended ErrorCode interface such as UserCode.
-// These are used by the errcode.Wrap* functions.
-type ErrorWrap interface {
-	WrapError(func(error) error)
-}
-
-// unwrapError allows the abstract retrieval of the underlying error.
-// Formalize the Unwrap interface, but don't export it.
-// The standard library errors package should export it.
-// Types that wrap errors should implement this to allow viewing of the underlying error.
-type unwrapError interface {
-	Unwrap() error
-}
-
-// Wrap calls errors.Wrap on the inner error.
-// This uses the WrapError method of ErrorWrap
-// If a nil is given it is a noop
-func Wrap(errCode ErrorWrap, msg string) {
-	if errCode == nil {
-		return
-	}
-	errCode.WrapError(func(err error) error {
-		return errors.Wrap(err, msg)
-	})
-}
-
-// Wrapf calls errors.Wrapf on the inner error.
-// This uses the WrapError method of ErrorWrap
-// If a nil is given it is a noop
-func Wrapf(errCode ErrorWrap, msg string, args ...interface{}) {
-	if errCode == nil {
-		return
-	}
-	errCode.WrapError(func(err error) error {
-		return errors.Wrapf(err, msg, args...)
-	})
-}
-
-// Wraps calls errors.Wraps on the inner error.
-// This uses the WrapError method of ErrorWrap
-// If a nil is given it is a noop
-func Wraps(errCode ErrorWrap, msg string, args ...interface{}) {
-	if errCode == nil {
-		return
-	}
-	errCode.WrapError(func(err error) error {
-		return errors.Wraps(err, msg, args...)
-	})
 }
 
 // HasClientData is used to defined how to retrieve the data portion of an ErrorCode to be returned to the client.
