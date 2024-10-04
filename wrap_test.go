@@ -40,7 +40,7 @@ func TestErrorWrapperFunctions(t *testing.T) {
 	{
 		bad := errcode.NewBadRequestErr(underlying)
 		AssertCode(t, bad, errcode.InvalidInputCode.CodeStr())
-		coded := errcode.Wrap(bad, "wrapped %s", "arg")
+		coded := errcode.Wrapf(bad, "wrapped %s", "arg")
 		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
 		if errMsg := coded.Error(); errMsg != "wrapped arg: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
@@ -90,7 +90,7 @@ func TestUserWrapperFunctions(t *testing.T) {
 			errcode.NewBadRequestErr(underlying),
 		)
 		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		coded = errcode.WrapUser(coded, "wrapped %s", "arg")
+		coded = errcode.WrapfUser(coded, "wrapped %s", "arg")
 		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
 		if errMsg := coded.Error(); errMsg != "user: wrapped arg: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
