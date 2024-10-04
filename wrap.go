@@ -4,10 +4,18 @@ import (
 	"github.com/gregwebs/errors"
 )
 
-// Wrap calls errors.Wrap or errors.Wrapf on the inner error.
+// Wrap calls errors.Wrap on the inner error.
 // This will wrap in place via errors.ErrorWrapper if available
 // If a nil is given it is a noop
-func Wrap(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
+func Wrap(errCode ErrorCode, msg string) ErrorCode {
+	//nolint:govet
+	return wrapG(wrapWith, errCode, msg)
+}
+
+// Wrapf calls errors.Wrapf on the inner error.
+// This will wrap in place via errors.ErrorWrapper if available
+// If a nil is given it is a noop
+func Wrapf(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
 	return wrapG(wrapWith, errCode, msg, args...)
 }
 
@@ -18,10 +26,18 @@ func Wraps(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
 	return wrapWith(errCode, errors.WrapsFn(msg, args...))
 }
 
-// WrapUser calls errors.Wrap or errors.Wrapf on the inner error.
+// WrapUser calls errors.Wrap on the inner error.
 // This will wrap in place via errors.ErrorWrapper if available
 // If a nil is given it is a noop
-func WrapUser(errCode UserCode, msg string, args ...interface{}) UserCode {
+func WrapUser(errCode UserCode, msg string) UserCode {
+	//nolint:govet
+	return wrapG(wrapUserWith, errCode, msg)
+}
+
+// WrapUserf calls errors.Wrapf on the inner error.
+// This will wrap in place via errors.ErrorWrapper if available
+// If a nil is given it is a noop
+func WrapfUser(errCode UserCode, msg string, args ...interface{}) UserCode {
 	return wrapG(wrapUserWith, errCode, msg, args...)
 }
 
@@ -32,10 +48,18 @@ func WrapsUser(errCode UserCode, msg string, args ...interface{}) UserCode {
 	return wrapUserWith(errCode, errors.WrapsFn(msg, args...))
 }
 
-// WrapOp calls errors.Wrap or errors.Wrapf on the inner error.
+// WrapOp calls errors.Wrap on the inner error.
 // This will wrap in place via errors.ErrorWrapper if available
 // If a nil is given it is a noop
-func WrapOp(errCode OpCode, msg string, args ...interface{}) OpCode {
+func WrapOp(errCode OpCode, msg string) OpCode {
+	//nolint:govet
+	return wrapG(wrapOpWith, errCode, msg)
+}
+
+// WrapOpf calls errors.Wrapf on the inner error.
+// This will wrap in place via errors.ErrorWrapper if available
+// If a nil is given it is a noop
+func WrapfOp(errCode OpCode, msg string, args ...interface{}) OpCode {
 	return wrapG(wrapOpWith, errCode, msg, args...)
 }
 
