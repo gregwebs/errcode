@@ -99,7 +99,7 @@ func NewCodedError(err error, code Code) CodedError {
 	}
 	return CodedError{
 		GetCode:   code,
-		ErrorWrap: &errors.ErrorWrap{Err: err},
+		ErrorWrap: errors.NewErrorWrap(err),
 	}
 }
 
@@ -170,7 +170,7 @@ func makeInternalStackCode(defaultCode Code) func(error) StackCode {
 		}
 		return NewStackCode(CodedError{
 			GetCode:   code,
-			ErrorWrap: &errors.ErrorWrap{Err: err},
+			ErrorWrap: errors.NewErrorWrap(err),
 		}, 3)
 	}
 }
