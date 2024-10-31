@@ -53,16 +53,16 @@ func NewStackCode(err ErrorCode, position ...int) StackCode {
 	if err == nil {
 		panic("NewStackCode: given error is nil")
 	}
-	stackPosition := 1
-	if len(position) > 0 {
-		stackPosition = position[0]
-	}
 
 	// if there is an existing trace, take that: it should be deeper
 	if tracer := errors.GetStackTracer(err); tracer != nil {
 		return StackCode{ErrorCode: err, GetStack: tracer}
 	}
 
+	stackPosition := 1
+	if len(position) > 0 {
+		stackPosition = position[0]
+	}
 	return StackCode{ErrorCode: err, GetStack: errors.NewStack(stackPosition)}
 }
 

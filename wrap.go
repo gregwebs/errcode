@@ -120,7 +120,7 @@ type withError[T any] struct {
 func newWithError[Err error](errCode Err, wrapErr func(error) error) withError[Err] {
 	return withError[Err]{
 		With:      errCode,
-		ErrorWrap: &errors.ErrorWrap{Err: wrapErr(errCode)},
+		ErrorWrap: errors.NewErrorWrap(wrapErr(errCode)),
 	}
 }
 
