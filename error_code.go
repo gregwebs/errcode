@@ -31,15 +31,15 @@
 // A few generic top-level error codes are provided (see the variables section of the doc).
 // You are encouraged to create your own error codes customized to your application rather than solely using generic errors.
 //
-// See NewJSONFormat for an opinion on how to send back meta data about errors with the error data to a client.
-// JSONFormat includes a body of response data (the "data field") that is by default the data from the Error
-// serialized to JSON.
-//
 // Stack traces are automatically added by NewInternalErr and show up as the Stack field in JSONFormat.
-// Errors can be grouped with Combine() and ungrouped via Errors() which show up as the Others field in JSONFormat.
+// Error Codes can be grouped with Combine() and ungrouped via ErrorsCodes() which show up as the Others field in JSONFormat.
 //
 // To extract any ErrorCodes from an error, use CodeChain().
 // This extracts error codes without information loss (using ChainContext).
+//
+// See NewJSONFormat for an opinion on how to send back meta data about errors with the error data to a client.
+// JSONFormat includes a body of response data (the "data field") that is by default the data from the Error
+// serialized to JSON.
 package errcode
 
 import (
