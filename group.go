@@ -143,6 +143,11 @@ type errorGroup interface {
 	Errors() []error
 }
 
+// This interface is checked by errors.As
+type asAny interface {
+	As(any) bool
+}
+
 // CodeChain resolves wrapped errors down to the first ErrorCode.
 // An error that is a grouping with multiple codes will have its error codes combined to a MultiErrorCode.
 // If the given error is not an ErrorCode, a ContextChain will be returned with Top set to the given error.
@@ -151,7 +156,21 @@ func CodeChain(errInput error) ErrorCode {
 	checkError := func(err error) ErrorCode {
 		if errCode, ok := err.(ErrorCode); ok {
 			return errCode
-		} else if eg, ok := err.(errorGroup); ok {
+		}
+
+		as, asOK := err.(asAny)
+		{
+			var ecAs ErrorCode
+			if asOK && as.As(ecAs) {
+				return ecAs
+			}
+		}
+
+		eg, egOK := err.(errorGroup)
+		if !egOK && asOK && as.As(eg) {
+			egOK = true
+		}
+		if egOK {
 			group := []ErrorCode{}
 			for _, errItem := range eg.Errors() {
 				if itemCode := CodeChain(errItem); itemCode != nil {
