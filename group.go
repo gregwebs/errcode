@@ -19,7 +19,7 @@ import (
 	"github.com/gregwebs/errors"
 )
 
-// ErrorCodes return all errors (from an ErrorGroup) that are of interface ErrorCode.
+// ErrorCodes return all errors (including those grouped) that are of interface ErrorCode.
 // It first calls the Errors function.
 func ErrorCodes(err error) []ErrorCode {
 	errorCodes := make([]ErrorCode, 0)
@@ -64,10 +64,10 @@ func combineGeneric[Err ErrorCode](initial Err, others ...error) *multiCode[Err]
 	}
 }
 
-var _ ErrorCode = (*multiCode[ErrorCode])(nil)         // assert implements interface
-var _ unwrapError = (*multiCode[ErrorCode])(nil)       // assert implements interface
-var _ errors.ErrorGroup = (*multiCode[ErrorCode])(nil) // assert implements interface
-var _ fmt.Formatter = (*multiCode[ErrorCode])(nil)     // assert implements interface
+var _ ErrorCode = (*multiCode[ErrorCode])(nil)     // assert implements interface
+var _ unwrapsError = (*multiCode[ErrorCode])(nil)  // assert implements interface
+var _ errorGroup = (*multiCode[ErrorCode])(nil)    // assert implements interface
+var _ fmt.Formatter = (*multiCode[ErrorCode])(nil) // assert implements interface
 
 // A MultiErrorCode contains at least one ErrorCode and uses that to satisfy the ErrorCode and related interfaces
 // The Error method will produce a string of all the errors with a semi-colon separation.
@@ -116,7 +116,7 @@ func (e multiCode[Err]) Error() string {
 	return output
 }
 
-// Errors fullfills the ErrorGroup inteface
+// Errors fullfills the errorGroup inteface
 func (e multiCode[Err]) Errors() []error {
 	return append([]error{error(e.ErrCode)}, e.rest...)
 }
@@ -127,23 +127,31 @@ func (e multiCode[Err]) Code() Code {
 }
 
 // Unwrap fullfills the errors package Unwrap function
-func (e multiCode[Err]) Unwrap() error {
-	return e.ErrCode
+func (e multiCode[Err]) Unwrap() []error {
+	return e.Errors()
 }
 
 func (e multiCode[Err]) First() Err {
 	return e.ErrCode
 }
 
+type unwrapsError interface {
+	Unwrap() []error
+}
+
+type errorGroup interface {
+	Errors() []error
+}
+
 // CodeChain resolves wrapped errors down to the first ErrorCode.
-// An error that is an ErrorGroup with multiple codes will have its error codes combined to a MultiErrorCode.
+// An error that is a grouping with multiple codes will have its error codes combined to a MultiErrorCode.
 // If the given error is not an ErrorCode, a ContextChain will be returned with Top set to the given error.
 // This allows the return object to maintain a full Error() message.
 func CodeChain(errInput error) ErrorCode {
 	checkError := func(err error) ErrorCode {
 		if errCode, ok := err.(ErrorCode); ok {
 			return errCode
-		} else if eg, ok := err.(errors.ErrorGroup); ok {
+		} else if eg, ok := err.(errorGroup); ok {
 			group := []ErrorCode{}
 			for _, errItem := range eg.Errors() {
 				if itemCode := CodeChain(errItem); itemCode != nil {

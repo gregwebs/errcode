@@ -362,22 +362,23 @@ func TestUserMsg(t *testing.T) {
 	if errcode.GetUserMsg(umEmpty.AddTo(MinimalError{})) != "" {
 		t.Errorf("expected empty string")
 	}
-	if umEmpty.AddTo(nil) != nil {
-		t.Errorf("expected nil")
+	nilAdd := umEmpty.AddTo(nil)
+	if nilAdd != nil {
+		t.Errorf("expected nil but got %+v", nilAdd)
 	}
 
 	UserMsgEquals(t, &ErrorWrapper{Err: ue}, "user")
 	UserMsgEquals(t, &ErrorWrapper{Err: UserMsgErrorEmbed{EmbedUserMsg: errcode.EmbedUserMsg{Msg: "field"}}}, "field")
 
-	msgErrCode := errcode.UserMsgErrCode{Msg: "msg", ErrorCode: MinimalError{}}
+	msgErrCode := errcode.WithUserMsg("msg", MinimalError{})
 	AssertUserMsg(t, msgErrCode, "msg")
 	UserMsgEquals(t, msgErrCode, "msg")
 
 	UserMsgEquals(t, &ErrorWrapper{Err: msgErrCode}, "msg")
-	wrappedUser := &ErrorWrapper{Err: errcode.UserMsgErrCode{Msg: "msg", ErrorCode: ue}}
+	wrappedUser := &ErrorWrapper{Err: errcode.WithUserMsg("msg", ue)}
 	AssertUserMsg(t, wrappedUser, "msg")
 	UserMsgEquals(t, wrappedUser, "msg")
-	UserMsgEquals(t, errcode.UserMsgErrCode{Msg: "msg", ErrorCode: ue}, "msg")
+	UserMsgEquals(t, errcode.WithUserMsg("msg", ue), "msg")
 }
 
 func AssertCodes(t *testing.T, code errcode.ErrorCode, codeStrs ...errcode.CodeStr) {

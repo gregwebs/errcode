@@ -19,6 +19,10 @@ func (e MultiErrors) Errors() []error {
 	return e.Multi
 }
 
+func (e MultiErrors) Unwrap() []error {
+	return e.Multi
+}
+
 var _ error = MultiErrors{}
 var _ errors.ErrorGroup = MultiErrors{}
 

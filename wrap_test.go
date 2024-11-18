@@ -74,46 +74,46 @@ func TestUserWrapperFunctions(t *testing.T) {
 			errcode.NewBadRequestErr(underlying),
 		)
 		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		coded = errcode.WrapUser(coded, "wrapped")
-		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		if errMsg := coded.Error(); errMsg != "user: wrapped: underlying" {
+		userCode := errcode.WrapUser(coded, "wrapped")
+		AssertCode(t, userCode, errcode.InvalidInputCode.CodeStr())
+		if errMsg := userCode.Error(); errMsg != "user: wrapped: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		tripleUnwrap := errors.Unwrap(errors.Unwrap(errors.Unwrap(coded)))
-		if tripleUnwrap.Error() != underlying.Error() {
-			t.Errorf("bad unwrap: %s", tripleUnwrap.Error())
+		cause := errors.Cause(userCode)
+		if cause.Error() != underlying.Error() {
+			t.Errorf("bad unwrap: %s. expected: %s", cause.Error(), underlying.Error())
 		}
 	}
 
 	{
-		coded := errcode.WithUserMsg("user",
+		orig := errcode.WithUserMsg("user",
 			errcode.NewBadRequestErr(underlying),
 		)
-		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		coded = errcode.WrapfUser(coded, "wrapped %s", "arg")
+		AssertCode(t, orig, errcode.InvalidInputCode.CodeStr())
+		coded := errcode.WrapfUser(orig, "wrapped %s", "arg")
 		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
 		if errMsg := coded.Error(); errMsg != "user: wrapped arg: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		tripleUnwrap := errors.Unwrap(errors.Unwrap(errors.Unwrap(coded)))
-		if tripleUnwrap.Error() != underlying.Error() {
-			t.Errorf("bad unwrap: %s", tripleUnwrap.Error())
+		cause := errors.Cause(coded)
+		if cause.Error() != underlying.Error() {
+			t.Errorf("bad unwrap: %s", cause.Error())
 		}
 	}
 
 	{
-		coded := errcode.WithUserMsg("user",
+		orig := errcode.WithUserMsg("user",
 			errcode.NewBadRequestErr(underlying),
 		)
-		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
-		coded = errcode.WrapsUser(coded, "wrapped", "arg", 1)
+		AssertCode(t, orig, errcode.InvalidInputCode.CodeStr())
+		coded := errcode.WrapsUser(orig, "wrapped", "arg", 1)
 		AssertCode(t, coded, errcode.InvalidInputCode.CodeStr())
 		if errMsg := coded.Error(); errMsg != "user: wrapped arg=1: underlying" {
 			t.Errorf("Wrap unexpected: %s", errMsg)
 		}
-		tripleUnwrap := errors.Unwrap(errors.Unwrap(errors.Unwrap(coded)))
-		if tripleUnwrap.Error() != underlying.Error() {
-			t.Errorf("bad unwrap: %s", tripleUnwrap.Error())
+		cause := errors.Cause(coded)
+		if cause.Error() != underlying.Error() {
+			t.Errorf("bad unwrap: %s. expected: %s", cause.Error(), underlying.Error())
 		}
 	}
 }
