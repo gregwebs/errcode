@@ -133,6 +133,17 @@ type ErrorCode interface {
 	Code() Code
 }
 
+// Return the first error code found.
+// This will unwrap the error as CodeChain does.
+// To get the ErrorCode in addition to the code, use CodeChain()
+func GetCode(err error) *Code {
+	if errCode := CodeChain(err); errCode != nil {
+		code := errCode.Code()
+		return &code
+	}
+	return nil
+}
+
 // HasClientData is used to defined how to retrieve the data portion of an ErrorCode to be returned to the client.
 // Otherwise the struct itself will be assumed to be all the data by the ClientData method.
 // This is provided for exensibility, but may be unnecessary for you.
