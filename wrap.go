@@ -29,16 +29,18 @@ func Wraps(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
 // WrapUser calls errors.Wrap on the inner error.
 // This will wrap in place via errors.ErrorWrapper if available
 // If a nil is given it is a noop
-func WrapUser(errCode UserCode, msg string) UserCode {
-	//nolint:govet
-	return wrapG(wrapUserWith, errCode, msg)
+func WrapUser[Err UserCode](errCode Err, msg string) *wrappedUserCode[Err] {
+	return wrapUserWith(errCode, errors.WrapFn(msg))
 }
 
 // WrapUserf calls errors.Wrapf on the inner error.
 // This will wrap in place via errors.ErrorWrapper if available
 // If a nil is given it is a noop
-func WrapfUser(errCode UserCode, msg string, args ...interface{}) UserCode {
-	return wrapG(wrapUserWith, errCode, msg, args...)
+func WrapfUser[Err UserCode](errCode Err, msg string, args ...interface{}) *wrappedUserCode[Err] {
+	if len(args) == 0 {
+		return wrapUserWith(errCode, errors.WrapFn(msg))
+	}
+	return wrapUserWith(errCode, errors.WrapfFn(msg, args...))
 }
 
 // WrapsUser calls errors.Wraps on the inner error.
@@ -78,18 +80,22 @@ func wrapWith(errCode ErrorCode, wrap func(error) error) ErrorCode {
 	if ok {
 		return errCode
 	}
-	return wrappedErrorCode{newWithError(errCode, wrap)}
+	return wrappedErrorCode[ErrorCode]{newWithError(errCode, wrap)}
 }
 
-func wrapUserWith(errCode UserCode, wrap func(error) error) UserCode {
-	if errCode == nil {
-		return errCode
+func id[T any](x T) T {
+	return x
+}
+
+func wrapUserWith[Err UserCode](errCode Err, wrap func(error) error) *wrappedUserCode[Err] {
+	if UserCode(errCode) == nil {
+		return nil
 	}
 	ok := errors.WrapInPlace(errCode, wrap)
 	if ok {
-		return errCode
+		return &wrappedUserCode[Err]{newWithError(errCode, id)}
 	}
-	return wrappedUserCode{newWithError(errCode, wrap)}
+	return &wrappedUserCode[Err]{newWithError(errCode, wrap)}
 }
 
 func wrapOpWith(errCode OpCode, wrap func(error) error) OpCode {
@@ -124,19 +130,23 @@ func newWithError[Err error](errCode Err, wrapErr func(error) error) withError[E
 	}
 }
 
-type wrappedErrorCode struct{ withError[ErrorCode] }
+type wrappedErrorCode[Err ErrorCode] struct{ withError[ErrorCode] }
 
-func (wec wrappedErrorCode) Code() Code {
+func (wec wrappedErrorCode[Err]) Code() Code {
 	return wec.With.Code()
 }
 
-type wrappedUserCode struct{ withError[UserCode] }
+type wrappedUserCode[Err UserCode] struct{ withError[Err] }
 
-func (wec wrappedUserCode) Code() Code {
+func (wec wrappedUserCode[Err]) Code() Code {
 	return wec.With.Code()
 }
 
-func (wec wrappedUserCode) GetUserMsg() string {
+func (wec wrappedUserCode[Err]) Unwrap() error {
+	return wec.With
+}
+
+func (wec wrappedUserCode[Err]) GetUserMsg() string {
 	return wec.With.GetUserMsg()
 }
 

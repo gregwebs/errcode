@@ -58,29 +58,33 @@ func (e EmbedUserMsg) GetUserMsg() string {
 // UserMsgErrCode is an ErrorCode with a Msg field attached.
 // This can be conveniently constructed with NewUserMsg and AddTo or WithUserMsg
 // see the HasUserMsg documentation for alternatives.
-type UserMsgErrCode struct {
-	ErrorCode
-	Msg string
+type UserMsgErrCode[Err ErrorCode] struct {
+	ErrorCode Err
+	Msg       string
 }
 
 // Unwrap satisfies the errors package Unwrap function
-func (e UserMsgErrCode) Unwrap() error {
+func (e UserMsgErrCode[Err]) Unwrap() error {
 	return e.ErrorCode
 }
 
 // Error prefixes the user message to the underlying Err Error.
-func (e UserMsgErrCode) Error() string {
+func (e UserMsgErrCode[Err]) Error() string {
 	return e.Msg + ": " + e.ErrorCode.Error()
 }
 
+func (e UserMsgErrCode[Err]) Code() Code {
+	return e.ErrorCode.Code()
+}
+
 // GetUserMsg satisfies the [HasUserMsg] interface.
-func (e UserMsgErrCode) GetUserMsg() string {
+func (e UserMsgErrCode[Err]) GetUserMsg() string {
 	return e.Msg
 }
 
-var _ ErrorCode = (*UserMsgErrCode)(nil)   // assert implements interface
-var _ HasUserMsg = (*UserMsgErrCode)(nil)  // assert implements interface
-var _ unwrapError = (*UserMsgErrCode)(nil) // assert implements interface
+var _ ErrorCode = (*UserMsgErrCode[ErrorCode])(nil)   // assert implements interface
+var _ HasUserMsg = (*UserMsgErrCode[ErrorCode])(nil)  // assert implements interface
+var _ unwrapError = (*UserMsgErrCode[ErrorCode])(nil) // assert implements interface
 
 // AddUserMsg is constructed by UserMsg. It allows method chaining with AddTo.
 type AddUserMsg func(ErrorCode) UserCode
@@ -99,15 +103,20 @@ func (add AddUserMsg) AddTo(err ErrorCode) UserCode {
 //	}
 func UserMsg(msg string) AddUserMsg {
 	return func(err ErrorCode) UserCode {
-		return WithUserMsg(msg, err)
+		res := WithUserMsg(msg, err)
+		// return a nil UserCode rather than a nil UserCode(*UserMsgErrCode)
+		if res == nil {
+			return nil
+		}
+		return res
 	}
 }
 
 // WithUserMsg creates a UserMsgErrCode
 // Panics if msg is empty or err is nil.
-func WithUserMsg(msg string, err ErrorCode) UserCode {
-	if err == nil {
+func WithUserMsg[Err ErrorCode](msg string, err Err) *UserMsgErrCode[Err] {
+	if ErrorCode(err) == nil {
 		return nil
 	}
-	return UserMsgErrCode{Msg: msg, ErrorCode: err}
+	return &UserMsgErrCode[Err]{Msg: msg, ErrorCode: err}
 }
