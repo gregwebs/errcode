@@ -36,19 +36,50 @@ func ErrorCodes(err error) []ErrorCode {
 	return errorCodes
 }
 
-type multiCode[Err ErrorCode] struct {
+type multiCode[Err ErrorCode, Other error] struct {
 	ErrCode Err
-	rest    []error
+	rest    []Other
+}
+
+func (e multiCode[Err, Other]) Error() string {
+	output := e.ErrCode.Error()
+	for _, item := range e.rest {
+		output += "; " + item.Error()
+	}
+	return output
+}
+
+// Errors fullfills the errorGroup inteface
+func (e multiCode[Err, Other]) Errors() []error {
+	rest := make([]error, len(e.rest))
+	for i, err := range e.rest {
+		rest[i] = error(err)
+	}
+	return append([]error{error(e.ErrCode)}, rest...)
+}
+
+// Code fullfills the ErrorCode inteface
+func (e multiCode[Err, Other]) Code() Code {
+	return e.ErrCode.Code()
+}
+
+// Unwrap fullfills the errors package Unwrap function
+func (e multiCode[Err, Other]) Unwrap() []error {
+	return e.Errors()
+}
+
+func (e multiCode[Err, Other]) First() Err {
+	return e.ErrCode
 }
 
 // Combine constructs a group that has at least one ErrorCode
 // This is "horizontal" composition.
 // If you want normal "vertical" composition use the Wrap* functions.
-func combineGeneric[Err ErrorCode](initial Err, others ...error) *multiCode[Err] {
-	var rest []error
+func combineGeneric[Err ErrorCode, Other error](initial Err, others ...Other) *multiCode[Err, Other] {
+	var rest []Other
 	for _, other := range others {
 		if ErrorCode(initial) == nil {
-			if errCode, ok := other.(Err); ok {
+			if errCode, ok := error(other).(Err); ok {
 				initial = errCode
 				continue
 			}
@@ -58,81 +89,85 @@ func combineGeneric[Err ErrorCode](initial Err, others ...error) *multiCode[Err]
 	if len(rest) == 0 && ErrorCode(initial) == nil {
 		return nil
 	}
-	return &multiCode[Err]{
+	return &multiCode[Err, Other]{
 		ErrCode: initial,
 		rest:    rest,
 	}
 }
 
-var _ ErrorCode = (*multiCode[ErrorCode])(nil)     // assert implements interface
-var _ unwrapsError = (*multiCode[ErrorCode])(nil)  // assert implements interface
-var _ errorGroup = (*multiCode[ErrorCode])(nil)    // assert implements interface
-var _ fmt.Formatter = (*multiCode[ErrorCode])(nil) // assert implements interface
+var _ ErrorCode = (*multiCode[ErrorCode, error])(nil)     // assert implements interface
+var _ unwrapsError = (*multiCode[ErrorCode, error])(nil)  // assert implements interface
+var _ errorGroup = (*multiCode[ErrorCode, error])(nil)    // assert implements interface
+var _ fmt.Formatter = (*multiCode[ErrorCode, error])(nil) // assert implements interface
 
 // A MultiErrorCode contains at least one ErrorCode and uses that to satisfy the ErrorCode and related interfaces
 // The Error method will produce a string of all the errors with a semi-colon separation.
-type MultiErrorCode struct{ multiCode[ErrorCode] }
+type MultiErrorCode struct{ multiCode[ErrorCode, error] }
 
 // A MultiUserCode is similar to a MultiErrorCode but satisfies UserCode
-type MultiUserCode struct{ multiCode[UserCode] }
-
-var _ UserCode = (*MultiUserCode)(nil) // assert implements interface
+type MultiUserCode struct{ multiCode[UserCode, error] }
 
 func (e MultiUserCode) GetUserMsg() string {
 	return e.ErrCode.GetUserMsg()
 }
 
-func Combine(initial ErrorCode, others ...error) *MultiErrorCode {
+var _ UserCode = (*MultiUserCode)(nil) // assert implements interface
+
+// A MultiUsersCode is similar to a MultiUserCode but only contains UserCode
+type MultiUsersCode struct{ multiCode[UserCode, UserCode] }
+
+func (e MultiUsersCode) GetUserMsg() string {
+	return e.ErrCode.GetUserMsg()
+}
+
+var _ UserCode = (*MultiUsersCode)(nil) // assert implements interface
+
+func Combine(initial ErrorCode, others ...error) ErrorCode {
+	if len(others) == 0 && initial != nil {
+		return initial
+	}
 	combined := combineGeneric(initial, others...)
 	if combined == nil {
 		return nil
 	}
-	multiErrCode := multiCode[ErrorCode]{
+	multiErrCode := multiCode[ErrorCode, error]{
 		ErrCode: combined.ErrCode,
 		rest:    combined.rest,
 	}
 	return &MultiErrorCode{multiErrCode}
 }
 
-// CombineUser constructs a group that has at least one UserCode
-// It is the same as Combine but the result will satisfy UserCode
-func CombineUser(initial UserCode, others ...error) *MultiUserCode {
+// CombineUser constructs a group of UserCode
+func CombineUsers(initial UserCode, others ...UserCode) UserCode {
+	if len(others) == 0 && initial != nil {
+		return initial
+	}
 	combined := combineGeneric(initial, others...)
 	if combined == nil {
 		return nil
 	}
-	multiErrCode := multiCode[UserCode]{
+	multiErrCode := multiCode[UserCode, UserCode]{
+		ErrCode: combined.ErrCode,
+		rest:    combined.rest,
+	}
+	return &MultiUsersCode{multiErrCode}
+}
+
+// CombineUser constructs a group that has at least one UserCode
+// It is the same as Combine but the result will satisfy UserCode
+func CombineUser(initial UserCode, others ...error) UserCode {
+	if len(others) == 0 && initial != nil {
+		return initial
+	}
+	combined := combineGeneric(initial, others...)
+	if combined == nil {
+		return nil
+	}
+	multiErrCode := multiCode[UserCode, error]{
 		ErrCode: combined.ErrCode,
 		rest:    combined.rest,
 	}
 	return &MultiUserCode{multiErrCode}
-}
-
-func (e multiCode[Err]) Error() string {
-	output := e.ErrCode.Error()
-	for _, item := range e.rest {
-		output += "; " + item.Error()
-	}
-	return output
-}
-
-// Errors fullfills the errorGroup inteface
-func (e multiCode[Err]) Errors() []error {
-	return append([]error{error(e.ErrCode)}, e.rest...)
-}
-
-// Code fullfills the ErrorCode inteface
-func (e multiCode[Err]) Code() Code {
-	return e.ErrCode.Code()
-}
-
-// Unwrap fullfills the errors package Unwrap function
-func (e multiCode[Err]) Unwrap() []error {
-	return e.Errors()
-}
-
-func (e multiCode[Err]) First() Err {
-	return e.ErrCode
 }
 
 type unwrapsError interface {
@@ -259,7 +294,7 @@ func (err ChainContext) Format(s fmt.State, verb rune) {
 }
 
 // Format implements the Formatter interface
-func (e multiCode[Err]) Format(s fmt.State, verb rune) {
+func (e multiCode[Err, Other]) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
