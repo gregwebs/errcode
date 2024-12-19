@@ -55,4 +55,4 @@ jobs:
 
       - name: build and test
         shell: bash
-        run: ./scripts/build && ./scripts/test
+        run: go build ./... && go test ./...
