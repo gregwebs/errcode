@@ -4,22 +4,62 @@ Error codes reliably communicate the error type, particularly across program or 
 A program can reliably respond to an error if it can be sure to understand its type.
 Error monitoring systems can reliably understand (dedup) what errors are occurring and metrics can easily be generated.
 
-## status
+ErrorCode supports hierachy and associating to metadata such as HTTP codes.
+The common simple form of this is to properly attach an HTTP code to an error.
+When clients need to react to specific errors, both the HTTP code and a more specific error code can be associated to the error.
 
-This library is in a completed state.
+
+## Status
+
+This library has been used in production and is in a completed state.
+Recently there has been some experimentation with techniques for wrapping errors and leveraging generics.
 
 # errcode overview
 
 This package extends go errors via interfaces to have error codes.
+
+```go
+type ErrorCode interface {
+	error
+	Code() Code
+}
+```
+
+A Code is a string that can be placed in a hierarchy
+
+```go
+type Code struct {
+	codeStr CodeStr
+	Parent  *Code
+}
+
+type CodeStr string
+```
+
 The two main goals are
 
   * The clients can reliably understand errors by checking against error codes.
   * Structure information is sent to the client
 
+The package also provides `UserCode` designed to provide a user-facing message for end users
+rather than technical error messages.
+
+
+```go
+type UserCode interface {
+	ErrorCode
+	HasUserMsg
+}
+
+type HasUserMsg interface {
+	GetUserMsg() string
+}
+```
+
 See the [go docs](https://godoc.org/github.com/pingcap/errcode) for extensive API documentation.
 
 There are other packages that add error code capabilities to errors.
-However, they almost universally use a single underlying error struct.
+However, most use a single underlying error struct.
 A code or other annotation is a field on that struct.
 In most cases a structured error response is only possible to create dynamically via tags and labels.
 
