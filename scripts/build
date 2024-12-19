@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-go build .
-pushd grpc
-go build .
-popd
-pushd goa
-go build .
-popd
