@@ -1,15 +1,6 @@
-// Copyright 2018 PingCAP, Inc.
+// Copyright Greg Weber and PingCAP, Inc.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0
 
 package errcode_test
 
@@ -206,27 +197,35 @@ func TestNewInvalidInputErr(t *testing.T) {
 	ErrorEquals(t, err, "error")
 	ClientDataEquals(t, err, nil, errcode.CodeStr("input.testcode"))
 
+	invalidCodeStr := errcode.InvalidInputCode.CodeStr()
+	internalCodeStr := errcode.InternalCode.CodeStr()
+
 	internalErr := errcode.NewInternalErr(MinimalError{})
 	err = errcode.NewInvalidInputErr(internalErr)
-	internalCodeStr := errcode.CodeStr("internal")
-	AssertCode(t, err, internalCodeStr)
-	AssertHTTPCode(t, err, 500)
+	AssertCode(t, err, invalidCodeStr)
+	AssertHTTPCode(t, err, 400)
 	ErrorEquals(t, err, "error")
-	ClientDataEquals(t, err, nil, internalCodeStr, MinimalError{})
+	ClientDataEquals(t, err, nil, invalidCodeStr, internalErr)
 
 	wrappedInternalErr := errcode.NewInternalErr(internalErr)
-	AssertCode(t, err, internalCodeStr)
-	AssertHTTPCode(t, err, 500)
+	AssertCode(t, wrappedInternalErr, internalCodeStr)
+	AssertHTTPCode(t, wrappedInternalErr, 500)
 	ErrorEquals(t, err, "error")
 	ClientDataEquals(t, wrappedInternalErr, nil, internalCodeStr, MinimalError{})
 	// It should use the original stack trace, not the wrapped
 	AssertStackEquals(t, wrappedInternalErr, errcode.StackTrace(internalErr))
 
-	err = errcode.NewInvalidInputErr(InternalChild{})
+	err = errcode.NewInternalErr(InternalChild{})
 	AssertCode(t, err, internalChildCodeStr)
 	AssertHTTPCode(t, err, 503)
 	ErrorEquals(t, err, "internal child error")
 	ClientDataEquals(t, err, nil, internalChildCodeStr)
+
+	err = errcode.NewInvalidInputErr(InternalChild{})
+	AssertCode(t, err, invalidCodeStr)
+	AssertHTTPCode(t, err, 400)
+	ErrorEquals(t, err, "internal child error")
+	ClientDataEquals(t, err, nil, invalidCodeStr, InternalChild{})
 }
 
 func TestStackTrace(t *testing.T) {
@@ -401,7 +400,7 @@ func AssertHTTPCode(t *testing.T, code errcode.ErrorCode, httpCode int) {
 	t.Helper()
 	expected := code.Code().HTTPCode()
 	if expected != httpCode {
-		t.Errorf("excpected HTTP Code %v but got %v", httpCode, expected)
+		t.Errorf("expected HTTP Code %v but got %v", httpCode, expected)
 	}
 }
 
@@ -433,9 +432,15 @@ func ClientDataResult(t *testing.T, code errcode.ErrorCode, result clientDataRes
 	}
 
 	others := make([]errcode.JSONFormat, len(result.otherCodes))
+	more := make([]errcode.JSONFormat, 0)
 	for i, err := range result.otherCodes {
 		others[i] = errcode.NewJSONFormat(err)
+		if len(others[i].Others) > 0 {
+			more = append(more, others[i].Others...)
+			others[i].Others = nil
+		}
 	}
+	others = append(others, more...)
 	op := result.operation
 	if op == "" {
 		op = errcode.Operation(result.data)

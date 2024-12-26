@@ -1,45 +1,32 @@
-// Copyright 2018 PingCAP, Inc.
+// Copyright Greg Weber and PingCAP, Inc.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0
 
 // Package errcode facilitates standardized API error codes.
-// The goal is that clients can reliably understand errors by checking against immutable error codes
+// The goal is that clients can reliably understand errors by checking against error codes
 //
-// This godoc documents usage. For broader context, see https://github.com/gregwebs/errcode/tree/master/README.md
+// This godoc documents usage. For broader context, see the [README].
 //
-// Error codes are represented as strings by CodeStr (see CodeStr documentation).
+// Error codes are represented as strings by [CodeStr], not by numbers.
 //
-// This package is designed to have few opinions and be a starting point for how you want to do errors in your project.
-// The main requirement is to satisfy the ErrorCode interface by attaching a Code to an Error.
-// See the documentation of ErrorCode.
-// Additional optional interfaces HasClientData, HasOperation, StackTracer, and the Unwrap method are used for extensibility
-// in creating structured error data representations.
+// This package is a flexible starting point for you needs-
+// The only requirement is to satisfy the [ErrorCode] interface by attaching a [Code] to an error.
 //
-// Hierarchies are supported: a Code can point to a parent.
-// This is used in the HTTPCode implementation to inherit HTTP codes found with MetaDataFromAncestors.
-// The hierarchy is present in the Code's string representation with a dot separation.
+// A Code can have metadata such as an HTTP code associated with it.
+// A code can point to a parent code and will inherit its metadata.
 //
-// A few generic top-level error codes are provided (see the variables section of the doc).
-// You are encouraged to create your own error codes customized to your application rather than solely using generic errors.
+// Generic top-level error codes are provided (see the variables section of the doc).
+// You are encouraged to create your own error codes customized to your application but generic errors may suffice to get you started.
 //
-// Stack traces are automatically added by NewInternalErr and show up as the Stack field in JSONFormat.
-// Error Codes can be grouped with Combine() and ungrouped via ErrorsCodes() which show up as the Others field in JSONFormat.
+// Stack traces can be automatically added to error codes. This is done by [NewInternalErr].
 //
-// To extract any ErrorCodes from an error, use CodeChain().
-// This extracts error codes without information loss (using ChainContext).
+// To extract any ErrorCodes from an error, use [GetCode] or [CodeChain].
 //
-// See NewJSONFormat for an opinion on how to send back meta data about errors with the error data to a client.
-// JSONFormat includes a body of response data (the "data field") that is by default the data from the Error
+// [NewJSONFormat] is an opinionated way to send error data to a client: you can define a similar function to meet your needs.
+// [JSONFormat] includes a body of response data (the "data field") that is by default the data from the Error
 // serialized to JSON.
+//
+// [README]: https://github.com/gregwebs/errcode/tree/master/README.md
 package errcode
 
 import (
@@ -48,27 +35,23 @@ import (
 )
 
 // CodeStr is the name of the error code.
-// It is a representation of the type of a particular error.
 // The underlying type is string rather than int.
 // This enhances both extensibility (avoids merge conflicts) and user-friendliness.
-// A CodeStr can have dot separators indicating a hierarchy.
-//
-// Generally a CodeStr should never be modified once used by clients.
-// Instead a new CodeStr should be created.
+// CodeStr uses dot separators to indicate hierarchy.
 type CodeStr string
 
 func (str CodeStr) String() string { return string(str) }
 
-// A Code has a CodeStr representation.
-// It is attached to a Parent to find metadata from it.
+// A Code has a [CodeStr] representation.
+// It is attached to a parent Code to find metadata from it.
 type Code struct {
-	// codeStr does not include parent paths
-	// The full code (with parent paths) is accessed with CodeStr
+	// this field does not include parent paths
+	// The full code (with parent paths) is accessed with the CodeStr() method.
 	codeStr CodeStr
 	Parent  *Code
 }
 
-// CodeStr gives the full dot-separted path.
+// CodeStr gives the full dot-seperated path.
 // This is what should be used for equality comparison.
 func (code Code) CodeStr() CodeStr {
 	if code.Parent == nil {
@@ -78,8 +61,8 @@ func (code Code) CodeStr() CodeStr {
 }
 
 // NewCode creates a new top-level code.
-// A top-level code must not contain any dot separators: that will panic
-// Most codes should be created from hierachry with the Child method.
+// Codes can be created from an existing hierachry with the [Code.Child] method.
+// A top-level code must not contain any dot separators: that will panic.
 func NewCode(codeRep CodeStr) Code {
 	code := Code{codeStr: codeRep}
 	if err := code.checkCodePath(); err != nil {
@@ -102,40 +85,29 @@ func (code Code) Child(childStr CodeStr) Code {
 	return child
 }
 
-// FindAncestor looks for an ancestor satisfying the given test function.
-func (code Code) findAncestor(test func(Code) bool) *Code {
-	if test(code) {
-		return &code
-	}
-	if code.Parent == nil {
-		return nil
-	}
-	return (*code.Parent).findAncestor(test)
-}
-
 // IsAncestor looks for the given code in its ancestors.
 func (code Code) IsAncestor(ancestorCode Code) bool {
-	return nil != code.findAncestor(func(an Code) bool { return an == ancestorCode })
+	if code == ancestorCode {
+		return true
+	}
+	if code.Parent == nil {
+		return false
+	}
+	return (*code.Parent).IsAncestor(ancestorCode)
 }
 
 // ErrorCode is the interface that ties an error and Code together.
-// A Function that is not written in the context of an (HTTP) handler
-// can return a code that will eventually be sent back to the client.
 //
-// Note that there are additional interfaces such as UserCode
-// that can be defined by an ErrorCode to customize finding structured data for the client.
-//
-// The ErrorCode interface allows error codes to be defined.
-// without being forced to use a particular struct implementation such as CodedError.
-// However, CodedError is normally be used for generic error codes that wrap many different errors with the same code.
+// The ErrorCode interface allows error codes to be flexibly defined.
+// There are many pre-existing generic error code implementations available such as [NotFoundErr].
 type ErrorCode interface {
 	error
 	Code() Code
 }
 
-// Return the first error code found.
-// This will unwrap the error as CodeChain does.
-// To get the ErrorCode in addition to the code, use CodeChain()
+// Return the [Code] associated to the error.
+// This will unwrap the error until it encounters an [ErrorCode].
+// To get the ErrorCode in addition to the code, use [CodeChain].
 func GetCode(err error) *Code {
 	if errCode := CodeChain(err); errCode != nil {
 		code := errCode.Code()
@@ -209,12 +181,19 @@ func OperationClientData(errCode ErrorCode) (string, interface{}) {
 // NewJSONFormat turns an ErrorCode into a JSONFormat.
 // You can create your own json struct and write your own version of this function.
 func NewJSONFormat(errCode ErrorCode) JSONFormat {
+	return newJSONFormat(errCode, false)
+}
+
+func newJSONFormat(errCode ErrorCode, recur bool) JSONFormat {
 	// Gather up multiple errors.
 	// We discard any that are not ErrorCode.
-	errorCodes := ErrorCodes(errCode)[1:]
-	others := make([]JSONFormat, len(errorCodes))
-	for i, err := range errorCodes {
-		others[i] = NewJSONFormat(err)
+	var others []JSONFormat
+	if !recur {
+		errorCodes := ErrorCodes(errCode)[1:]
+		others = make([]JSONFormat, len(errorCodes))
+		for i, err := range errorCodes {
+			others[i] = newJSONFormat(err, true)
+		}
 	}
 
 	op, data := OperationClientData(errCode)
