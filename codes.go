@@ -1,15 +1,6 @@
-// Copyright 2018 PingCAP, Inc.
+// Copyright Greg Weber and PingCAP, Inc.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0
 
 package errcode
 
@@ -21,21 +12,21 @@ import (
 )
 
 var (
-	// InternalCode is equivalent to HTTP 500 Internal Server Error.
+	// InternalCode is associated to [http.StatusInternalServerError] HTTP 500
 	InternalCode = NewCode("internal").SetHTTP(http.StatusInternalServerError)
 
-	// NotFoundCode is equivalent to HTTP 404 Not Found.
+	// NotFoundCode is associated to [http.StatusNotFound] HTTP 404
 	NotFoundCode = NewCode("missing").SetHTTP(http.StatusNotFound)
 
-	// UnimplementedCode is mapped to HTTP 501.
+	// UnimplementedCode is associated to [http.StatusNotImplemented] HTTP 501
 	UnimplementedCode = InternalCode.Child("internal.unimplemented").SetHTTP(http.StatusNotImplemented)
 
-	// Unavailable is mapped to HTTP 503.
+	// Unavailable is mapped to [http.StatusServiceUnavailable] HTTP 503
 	UnavailableCode = InternalCode.Child("internal.unavailable").SetHTTP(http.StatusServiceUnavailable)
 
 	// StateCode is an error that is invalid due to the current system state.
 	// This operatiom could become valid if the system state changes
-	// This is mapped to HTTP 400.
+	// This is associated to HTTP 400.
 	StateCode = NewCode("state").SetHTTP(http.StatusBadRequest)
 
 	// AlreadyExistsCode indicates an attempt to create an entity failed because it already exists.
@@ -44,31 +35,36 @@ var (
 	AlreadyExistsCode = StateCode.Child("state.exists").SetHTTP(http.StatusUnprocessableEntity)
 
 	// OutOfRangeCode indicates an operation was attempted past a valid range.
-	// This is mapped to HTTP 400.
+	// This is associated to HTTP 400.
 	OutOfRangeCode = StateCode.Child("state.range")
 
 	// InvalidInputCode is equivalent to HTTP 400 Bad Request.
 	InvalidInputCode = NewCode("input").SetHTTP(http.StatusBadRequest)
 
+	// NotAcceptableCode is associated to [http.StatusNotAcceptable] HTTP 406
 	NotAcceptableCode = InvalidInputCode.Child("input.notacceptable").SetHTTP(http.StatusNotAcceptable)
 
 	// AuthCode represents an authentication or authorization issue.
+	// This is the parent code of [NotAuthenticatedCode] and [ForbiddenCode]
 	AuthCode = NewCode("auth")
 
 	// NotAuthenticatedCode indicates the user is not authenticated.
-	// This is mapped to HTTP 401.
-	// Note that HTTP 401 is poorly named "Unauthorized".
+	// This is associated to [http.StatusUnauthorized] HTTP 401 which is poorly named "Unauthorized".
 	NotAuthenticatedCode = AuthCode.Child("auth.unauthenticated").SetHTTP(http.StatusUnauthorized)
 
 	// ForbiddenCode indicates the user is not authorized.
-	// This is mapped to HTTP 403.
+	// This is associated to [http.StatusForbidden] HTTP 403.
 	ForbiddenCode = AuthCode.Child("auth.forbidden").SetHTTP(http.StatusForbidden)
 
+	// UnprocessableEntityCode is associated to [http.StatusUnprocessableEntity] HTTP 422
 	UnprocessableEntityCode = StateCode.Child("state.unprocessable").SetHTTP(http.StatusUnprocessableEntity)
 
-	// TimeoutCode represents a timed out connection
-	TimeoutCode        = NewCode("timeout")
+	// TimeoutCode represents a timed out connection. It is the parent code of [TimeoutGatewayCode] and [TimeoutRequestCode].
+	TimeoutCode = NewCode("timeout")
+
+	// TimeoutGatewayCode is associated to [http.StatusGatewayTimeout] HTTP 504
 	TimeoutGatewayCode = TimeoutCode.Child("timeout.gateway").SetHTTP(http.StatusGatewayTimeout)
+	// TimeoutRequestCode is associated to [http.StatusRequestTimeout] HTTP 408
 	TimeoutRequestCode = TimeoutCode.Child("timeout.request").SetHTTP(http.StatusRequestTimeout)
 )
 
@@ -83,24 +79,30 @@ type CodedError struct {
 	*errors.ErrorWrap
 }
 
-// NewCodedError is for constructing broad error kinds (e.g. those representing HTTP codes)
-// Which could have many different underlying go errors.
-// Eventually you may want to give your go errors more specific codes.
-// The second argument is the broad code.
-//
-// If the error given is already an ErrorCode,
-// that will be used as the code instead of the second argument.
+// NewCodedError is a helper for constructing error codes.
+// If the error given is already an ErrorCode descending from the given Code,
+// that will be used as the code.
 func NewCodedError(err error, code Code) CodedError {
+	ce, _ := newCodedError(err, code)
+	return ce
+}
+
+func newCodedError(err error, code Code) (CodedError, ErrorCode) {
 	if err == nil {
 		panic("NewCodedError error is nil")
 	}
+	var alternative ErrorCode
 	if errcode, ok := err.(ErrorCode); ok {
-		code = errcode.Code()
+		if errcode.Code().IsAncestor(code) {
+			code = errcode.Code()
+		} else {
+			alternative = errcode
+		}
 	}
 	return CodedError{
 		GetCode:   code,
 		ErrorWrap: errors.NewErrorWrap(err),
-	}
+	}, alternative
 }
 
 var _ ErrorCode = (*CodedError)(nil)           // assert implements interface
@@ -116,7 +118,7 @@ func (e CodedError) Code() Code {
 type invalidInputErr struct{ CodedError }
 
 // NewInvalidInputErr creates an invalidInputErr from an err.
-// If the error is already an ErrorCode it will use that code.
+// If the error is already a descendant of InvalidInputCode it will use that code.
 // Otherwise it will use InvalidInputCode which gives HTTP 400.
 func NewInvalidInputErr(err error) ErrorCode {
 	return invalidInputErr{NewCodedError(err, InvalidInputCode)}
@@ -125,26 +127,25 @@ func NewInvalidInputErr(err error) ErrorCode {
 var _ ErrorCode = (*invalidInputErr)(nil)   // assert implements interface
 var _ unwrapError = (*invalidInputErr)(nil) // assert implements interface
 
-// badReqeustErr gives the code BadRequestErr.
+// BadReqeustErr is coded to InvalidInputCode
 type BadRequestErr struct{ CodedError }
 
-// NewBadRequestErr creates a BadReqeustErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use BadRequestCode which gives HTTP 400.
+// NewBadRequestErr creates a BadReqeustErr from an error.
+// If the error is already a descendant of InvalidInputCode it will use that code.
+// Otherwise it will use InvalidInputCode which gives HTTP 400.
 func NewBadRequestErr(err error) BadRequestErr {
 	return BadRequestErr{NewCodedError(err, InvalidInputCode)}
 }
 
-// InternalErr gives the code InternalCode
+// InternalErr is a coded to [InternalCode] and will have a stack trace attached.
 type InternalErr struct{ StackCode }
 
 var internalStackCode = makeInternalStackCode(InternalCode)
 
-// NewInternalErr creates an InternalErr from an err.
-// If the given err is an ErrorCode that is a descendant of InternalCode,
+// NewInternalErr creates an [InternalErr] from an error.
+// If the given error is an [ErrorCode] that is a descendant of [InternalCode],
 // its code will be used.
 // This ensures the intention of sending an HTTP 50x.
-// This function also records a stack trace.
 func NewInternalErr(err error) InternalErr {
 	return InternalErr{internalStackCode(err)}
 }
@@ -154,7 +155,7 @@ var _ unwrapError = (*InternalErr)(nil) // assert implements interface
 
 // makeInternalStackCode builds a function for making an an internal error with a stack trace.
 func makeInternalStackCode(defaultCode Code) func(error) StackCode {
-	if !defaultCode.IsAncestor(InternalCode) {
+	if !(defaultCode.IsAncestor(InternalCode) || defaultCode.HTTPCode() >= 500) {
 		panic(fmt.Errorf("code is not an internal code: %v", defaultCode))
 	}
 	return func(err error) StackCode {
@@ -164,7 +165,7 @@ func makeInternalStackCode(defaultCode Code) func(error) StackCode {
 		code := defaultCode
 		if errcode, ok := err.(ErrorCode); ok {
 			errCode := errcode.Code()
-			if errCode.IsAncestor(InternalCode) {
+			if errCode.IsAncestor(defaultCode) {
 				code = errCode
 			}
 		}
@@ -175,38 +176,36 @@ func makeInternalStackCode(defaultCode Code) func(error) StackCode {
 	}
 }
 
+// UnimplementedErr is coded to [UnimplementedCode] and ensures a stack trace
 type UnimplementedErr struct{ StackCode }
 
 var unimplementedStackCode = makeInternalStackCode(UnimplementedCode)
 
-// NewUnimplementedErr creates an InternalErr from an err.
-// If the given err is an ErrorCode that is a descendant of InternalCode,
+// NewUnimplementedErr creates an [UnimplementedErr] from an error.
+// If the given error is an [ErrorCode] that is a descendant of UnimplementedCode,
 // its code will be used.
-// This ensures the intention of sending an HTTP 50x.
-// This function also records a stack trace.
 func NewUnimplementedErr(err error) UnimplementedErr {
 	return UnimplementedErr{unimplementedStackCode(err)}
 }
 
+// UnavailableErr is coded to UnavailableCode and ensures a stack trace
 type UnavailableErr struct{ StackCode }
 
 var unavailableStackCode = makeInternalStackCode(UnavailableCode)
 
-// NewUnavailableErr creates an InternalErr from an err.
-// If the given err is an ErrorCode that is a descendant of InternalCode,
+// NewUnavailableErr creates an [UnavailableErr] from an error.
+// If the given error is an [ErrorCode] that is a descendant of UnavailableCode,
 // its code will be used.
-// This ensures the intention of sending an HTTP 50x.
-// This function also records a stack trace.
 func NewUnavailableErr(err error) UnavailableErr {
 	return UnavailableErr{unavailableStackCode(err)}
 }
 
-// notFound gives the code NotFoundCode.
+// NotFoundErr is coded to [NotFoundCode].
 type NotFoundErr struct{ CodedError }
 
-// NewNotFoundErr creates a notFound from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use NotFoundCode which gives HTTP 404.
+// NewNotFoundErr creates a [NotFoundErr] from an error.
+// If the error is already a descendant of [NotFoundCode] it will use that code.
+// Otherwise it will use [NotFoundCode] which gives HTTP 404.
 func NewNotFoundErr(err error) NotFoundErr {
 	return NotFoundErr{NewCodedError(err, NotFoundCode)}
 }
@@ -214,12 +213,12 @@ func NewNotFoundErr(err error) NotFoundErr {
 var _ ErrorCode = (*NotFoundErr)(nil)   // assert implements interface
 var _ unwrapError = (*NotFoundErr)(nil) // assert implements interface
 
-// NotAuthenticatedErr gives the code NotAuthenticatedCode.
+// NotAuthenticatedErr gives the code [NotAuthenticatedCode].
 type NotAuthenticatedErr struct{ CodedError }
 
-// NewNotAuthenticatedErr creates a NotAuthenticatedErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use NotAuthenticatedCode which gives HTTP 401.
+// NewNotAuthenticatedErr creates a [NotAuthenticatedErr] from an error.
+// If the error is already a descendant of [NotAuthenticatedCode] it will use that code.
+// Otherwise it will use [NotAuthenticatedCode] which gives HTTP 401.
 func NewNotAuthenticatedErr(err error) NotAuthenticatedErr {
 	return NotAuthenticatedErr{NewCodedError(err, NotAuthenticatedCode)}
 }
@@ -227,12 +226,12 @@ func NewNotAuthenticatedErr(err error) NotAuthenticatedErr {
 var _ ErrorCode = (*NotAuthenticatedErr)(nil)   // assert implements interface
 var _ unwrapError = (*NotAuthenticatedErr)(nil) // assert implements interface
 
-// ForbiddenErr gives the code ForbiddenCode.
+// ForbiddenErr is coded to [ForbiddenCode].
 type ForbiddenErr struct{ CodedError }
 
-// NewForbiddenErr creates a ForbiddenErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use ForbiddenCode which gives HTTP 401.
+// NewForbiddenErr creates a [ForbiddenErr] from an error.
+// If the error is already a descendant of [ForbiddenCode] it will use that code.
+// Otherwise it will use [ForbiddenCode] which gives HTTP 401.
 func NewForbiddenErr(err error) ForbiddenErr {
 	return ForbiddenErr{NewCodedError(err, ForbiddenCode)}
 }
@@ -240,51 +239,51 @@ func NewForbiddenErr(err error) ForbiddenErr {
 var _ ErrorCode = (*ForbiddenErr)(nil)   // assert implements interface
 var _ unwrapError = (*ForbiddenErr)(nil) // assert implements interface
 
-// UnprocessableErr gives the code UnprocessibleCode.
+// UnprocessableErr gives the code [UnprocessableEntityCode].
 type UnprocessableErr struct{ CodedError }
 
-// NewUnprocessableErr creates an UnprocessableErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use UnprocessableEntityCode which gives HTTP 422.
+// NewUnprocessableErr creates an [UnprocessableErr] from an error.
+// If the error is already a descedant of [UnprocessableEntityCode] it will use that code.
+// Otherwise it will use [UnprocessableEntityCode] which gives HTTP 422.
 func NewUnprocessableErr(err error) UnprocessableErr {
 	return UnprocessableErr{NewCodedError(err, UnprocessableEntityCode)}
 }
 
-// NotAcceptableErr gives the code NotAcceptableCode.
+// NotAcceptableErr is coded to [NotAcceptableCode].
 type NotAcceptableErr struct{ CodedError }
 
-// NewUnprocessableErr creates an UnprocessableErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use NotAcceptableCode which gives HTTP 406.
+// NewUnprocessableErr creates an [NotAcceptableCode] from an error.
+// If the error is already a descendant of [NotAcceptableCode] it will use that code.
+// Otherwise it will use [NotAcceptableCode] which gives HTTP 406.
 func NewNotAcceptableErr(err error) NotAcceptableErr {
 	return NotAcceptableErr{NewCodedError(err, NotAcceptableCode)}
 }
 
 type AlreadyExistsErr struct{ CodedError }
 
-// NewAlreadyExistsErr creates an AlreadyExistsErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use AlreadyExistsCode which gives HTTP 409.
+// NewAlreadyExistsErr creates an [AlreadyExistsErr] from an error.
+// If the error is already a descendant of [AlreadyExistsCode] it will use that code.
+// Otherwise it will use [AlreadyExistsCode] which gives HTTP 409.
 func NewAlreadyExistsErr(err error) AlreadyExistsErr {
 	return AlreadyExistsErr{NewCodedError(err, AlreadyExistsCode)}
 }
 
-// TimeoutGatewayErr gives the code TimeoutGatewayCode
+// TimeoutGatewayErr is coded to [TimeoutGatewayCode].
 type TimeoutGatewayErr struct{ CodedError }
 
-// NewTimeoutGatewayErr creates a TimeoutGatewayErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use TimeoutGatewayErr which gives HTTP 504.
+// NewTimeoutGatewayErr creates a TimeoutGatewayErr from an error.
+// If the error is already a descendant of [TimeoutGatewayCode] it will use that code.
+// Otherwise it will use [TimeoutGatewayErr] which gives HTTP 504.
 func NewTimeoutGatewayErr(err error) TimeoutGatewayErr {
 	return TimeoutGatewayErr{NewCodedError(err, TimeoutGatewayCode)}
 }
 
-// TimeoutRequestErr gives the code TimeoutRequestCode
+// TimeoutRequestErr gives the code [TimeoutRequestCode]
 type TimeoutRequestErr struct{ CodedError }
 
-// NewTimeoutRequestErr creates a TimeoutRequestErr from an err.
-// If the error is already an ErrorCode it will use that code.
-// Otherwise it will use TimeoutRequestErr which gives HTTP 408.
+// NewTimeoutRequestErr creates a [TimeoutRequestErr] from an error.
+// If the error is already a descendant of [TimeoutRequestCode] it will use that code.
+// Otherwise it will use [TimeoutRequestErr] which gives HTTP 408.
 func NewTimeoutRequestErr(err error) TimeoutRequestErr {
 	return TimeoutRequestErr{NewCodedError(err, TimeoutRequestCode)}
 }

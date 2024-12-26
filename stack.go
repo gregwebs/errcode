@@ -1,15 +1,6 @@
-// Copyright 2018 PingCAP, Inc.
+// Copyright Greg Weber and PingCAP, Inc.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0
 
 package errcode
 
@@ -29,25 +20,25 @@ func StackTrace(err error) errors.StackTrace {
 	return nil
 }
 
-// StackCode is an ErrorCode with stack trace information attached.
+// StackCode is an [ErrorCode] with stack trace information attached.
 // This may be used as a convenience to record the strack trace information for the error.
-// Generally stack traces aren't needed for user errors, but they are provided by NewInternalErr.
-// Its also possible to define your own structures that satisfy the StackTracer interface.
+// Stack traces are provided by [NewInternalErr].
+// Its also possible to define your own structures that satisfy the [errors.StackTracer] interface.
 type StackCode struct {
 	ErrorCode
 	GetStack errors.StackTracer
 }
 
-// StackTrace fulfills the StackTracer interface
+// StackTrace fulfills the [errors.StackTracer] interface
 func (e StackCode) StackTrace() errors.StackTrace {
 	return e.GetStack.StackTrace()
 }
 
-// NewStackCode constructs a StackCode, which is an ErrorCode with stack trace information
-// The second variable is an optional stack position gets rid of information about function calls to construct the stack trace.
+// NewStackCode constructs a [StackCode], which is an [ErrorCode] with stack trace information.
+// The second variable is an optional stack position that gets rid of information about function calls to construct the stack trace.
 // It is defaulted to 1 to remove this function call.
 //
-// NewStackCode first looks at the underlying error chain to see if it already has a StackTrace.
+// NewStackCode first looks at the underlying error chain to see if it already has an [errors.StackTracer].
 // If so, that StackTrace is used.
 func NewStackCode(err ErrorCode, position ...int) StackCode {
 	if err == nil {

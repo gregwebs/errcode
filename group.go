@@ -1,15 +1,6 @@
-// Copyright 2018 PingCAP, Inc.
+// Copyright Greg Weber and PingCAP, Inc.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0
 
 package errcode
 
@@ -122,6 +113,7 @@ func (e MultiUsersCode) GetUserMsg() string {
 
 var _ UserCode = (*MultiUsersCode)(nil) // assert implements interface
 
+// Combine constructs a single ErrorCode as a [MultiErrorCode].
 func Combine(initial ErrorCode, others ...error) ErrorCode {
 	if len(others) == 0 && initial != nil {
 		return initial
@@ -137,7 +129,7 @@ func Combine(initial ErrorCode, others ...error) ErrorCode {
 	return &MultiErrorCode{multiErrCode}
 }
 
-// CombineUser constructs a group of UserCode
+// CombineUsers constructs a single UserCode as a [MultiUsersCode].
 func CombineUsers(initial UserCode, others ...UserCode) UserCode {
 	if len(others) == 0 && initial != nil {
 		return initial
@@ -153,8 +145,7 @@ func CombineUsers(initial UserCode, others ...UserCode) UserCode {
 	return &MultiUsersCode{multiErrCode}
 }
 
-// CombineUser constructs a group that has at least one UserCode
-// It is the same as Combine but the result will satisfy UserCode
+// CombineUser constructs a single UserCode as a [MultiUsersCode].
 func CombineUser(initial UserCode, others ...error) UserCode {
 	if len(others) == 0 && initial != nil {
 		return initial
