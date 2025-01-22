@@ -14,18 +14,16 @@ import (
 
 // ErrorCodes return all errors (including those grouped) that are of interface ErrorCode.
 // It first calls the Errors function.
-func ErrorCodes(err error) []ErrorCode {
+func ErrorCodes(errIn error) []ErrorCode {
 	errorCodes := make([]ErrorCode, 0)
-	//nolint:staticcheck
-	errwrap.WalkDeep(err, func(err error) bool {
+	for err := range errwrap.UnwrapGroups(errIn) {
 		if errcode, ok := err.(ErrorCode); ok {
 			// avoid duplicating codes
 			if len(errorCodes) == 0 || errorCodes[len(errorCodes)-1].Code().codeStr != errcode.Code().codeStr {
 				errorCodes = append(errorCodes, errcode)
 			}
 		}
-		return false
-	})
+	}
 	return errorCodes
 }
 
