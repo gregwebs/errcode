@@ -114,18 +114,18 @@ func (e CodedError) Code() Code {
 	return e.GetCode
 }
 
-// invalidInputErr gives the code InvalidInputCode.
-type invalidInputErr struct{ CodedError }
+// InvalidInputErr gives the code InvalidInputCode.
+type InvalidInputErr struct{ CodedError }
 
-// NewInvalidInputErr creates an invalidInputErr from an err.
+// NewInvalidInputErr creates an InvalidInputErr from an err.
 // If the error is already a descendant of InvalidInputCode it will use that code.
 // Otherwise it will use InvalidInputCode which gives HTTP 400.
-func NewInvalidInputErr(err error) ErrorCode {
-	return invalidInputErr{NewCodedError(err, InvalidInputCode)}
+func NewInvalidInputErr(err error) InvalidInputErr {
+	return InvalidInputErr{NewCodedError(err, InvalidInputCode)}
 }
 
-var _ ErrorCode = (*invalidInputErr)(nil)   // assert implements interface
-var _ unwrapError = (*invalidInputErr)(nil) // assert implements interface
+var _ ErrorCode = (*InvalidInputErr)(nil)   // assert implements interface
+var _ unwrapError = (*InvalidInputErr)(nil) // assert implements interface
 
 // BadReqeustErr is coded to InvalidInputCode
 type BadRequestErr struct{ CodedError }
