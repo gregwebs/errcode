@@ -85,20 +85,21 @@ var _ ErrorCode = (*multiCode[ErrorCode, error])(nil)     // assert implements i
 var _ unwrapsError = (*multiCode[ErrorCode, error])(nil)  // assert implements interface
 var _ fmt.Formatter = (*multiCode[ErrorCode, error])(nil) // assert implements interface
 
-// A MultiErrorCode contains at least one ErrorCode and uses that to satisfy the ErrorCode and related interfaces
+// A multiErrorCode contains at least one ErrorCode and uses that to satisfy the ErrorCode and related interfaces
 // The Error method will produce a string of all the errors with a semi-colon separation.
-type MultiErrorCode struct{ multiCode[ErrorCode, error] }
+type multiErrorCode struct{ multiCode[ErrorCode, error] }
 
-// A MultiUserCode is similar to a MultiErrorCode but satisfies UserCode
-type MultiUserCode struct{ multiCode[UserCode, error] }
+// A multiUserCode is similar to a multiErrorCode but satisfies UserCode
+type multiUserCode struct{ multiCode[UserCode, error] }
 
-func (e MultiUserCode) GetUserMsg() string {
+func (e multiUserCode) GetUserMsg() string {
 	return e.ErrCode.GetUserMsg()
 }
 
-var _ UserCode = (*MultiUserCode)(nil) // assert implements interface
+var _ UserCode = (*multiUserCode)(nil) // assert implements interface
 
-// Combine constructs a single ErrorCode as a [MultiErrorCode].
+// Combine constructs a single ErrorCode.
+// The returned UserCode can have its errors unwrapped via interface{ Unwrap() []error }
 func Combine(initial ErrorCode, others ...error) ErrorCode {
 	if len(others) == 0 && initial != nil {
 		return initial
@@ -111,10 +112,11 @@ func Combine(initial ErrorCode, others ...error) ErrorCode {
 		ErrCode: combined.ErrCode,
 		rest:    combined.rest,
 	}
-	return &MultiErrorCode{multiErrCode}
+	return &multiErrorCode{multiErrCode}
 }
 
-// CombineUser constructs a single UserCode as a [MultiUserCode].
+// CombineUser constructs a single UserCode.
+// The returned UserCode can have its errors unwrapped via interface{ Unwrap() []error }
 func CombineUser(initial UserCode, others ...error) UserCode {
 	if len(others) == 0 && initial != nil {
 		return initial
@@ -127,7 +129,7 @@ func CombineUser(initial UserCode, others ...error) UserCode {
 		ErrCode: combined.ErrCode,
 		rest:    combined.rest,
 	}
-	return &MultiUserCode{multiErrCode}
+	return &multiUserCode{multiErrCode}
 }
 
 type unwrapsError interface {
@@ -140,7 +142,7 @@ type asAny interface {
 }
 
 // CodeChain resolves wrapped errors down to the first ErrorCode.
-// An error that is a grouping with multiple codes will have its error codes combined to a MultiErrorCode.
+// An error that is a grouping with multiple codes will have its error codes combined to a multiErrorCode.
 // If the given error is not an ErrorCode, a ContextChain will be returned with Top set to the given error.
 // This allows the return object to maintain a full Error() message.
 func CodeChain(errInput error) ErrorCode {
