@@ -2,6 +2,8 @@ package errcode
 
 import (
 	"github.com/gregwebs/errors"
+	"github.com/gregwebs/errors/errwrap"
+	"github.com/gregwebs/errors/slogerr"
 )
 
 // Wrap calls errors.Wrap on the inner error.
@@ -23,7 +25,7 @@ func Wrapf(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
 // This will wrap in place via errors.ErrorWrapper if available
 // If a nil is given it is a noop
 func Wraps(errCode ErrorCode, msg string, args ...interface{}) ErrorCode {
-	return wrapWith(errCode, errors.WrapsFn(msg, args...))
+	return wrapWith(errCode, slogerr.WrapsFn(msg, args...))
 }
 
 // WrapUser calls errors.Wrap on the inner error.
@@ -45,7 +47,7 @@ func WrapfUser(errCode UserCode, msg string, args ...interface{}) UserCode {
 // This uses the WrapError method of ErrorWrap
 // If a nil is given it is a noop
 func WrapsUser(errCode UserCode, msg string, args ...interface{}) UserCode {
-	return wrapUserWith(errCode, errors.WrapsFn(msg, args...))
+	return wrapUserWith(errCode, slogerr.WrapsFn(msg, args...))
 }
 
 // WrapOp calls errors.Wrap on the inner error.
@@ -67,14 +69,14 @@ func WrapfOp(errCode OpCode, msg string, args ...interface{}) OpCode {
 // This uses the WrapError method of ErrorWrap
 // If a nil is given it is a noop
 func WrapsOp(errCode OpCode, msg string, args ...interface{}) OpCode {
-	return wrapOpWith(errCode, errors.WrapsFn(msg, args...))
+	return wrapOpWith(errCode, slogerr.WrapsFn(msg, args...))
 }
 
 func wrapWith(errCode ErrorCode, wrap func(error) error) ErrorCode {
 	if errCode == nil {
 		return errCode
 	}
-	ok := errors.WrapInPlace(errCode, wrap)
+	ok := errwrap.WrapInPlace(errCode, wrap)
 	if ok {
 		return errCode
 	}
@@ -85,7 +87,7 @@ func wrapUserWith(errCode UserCode, wrap func(error) error) UserCode {
 	if errCode == nil {
 		return errCode
 	}
-	ok := errors.WrapInPlace(errCode, wrap)
+	ok := errwrap.WrapInPlace(errCode, wrap)
 	if ok {
 		return errCode
 	}
@@ -96,7 +98,7 @@ func wrapOpWith(errCode OpCode, wrap func(error) error) OpCode {
 	if errCode == nil {
 		return errCode
 	}
-	ok := errors.WrapInPlace(errCode, wrap)
+	ok := errwrap.WrapInPlace(errCode, wrap)
 	if ok {
 		return errCode
 	}
@@ -113,14 +115,14 @@ type unwrapError interface {
 
 type withError[T any] struct {
 	With T
-	*errors.ErrorWrap
+	*errwrap.ErrorWrap
 }
 
 // do a nil check before calling this
 func newWithError[Err error](errCode Err, wrapErr func(error) error) withError[Err] {
 	return withError[Err]{
 		With:      errCode,
-		ErrorWrap: errors.NewErrorWrap(wrapErr(errCode)),
+		ErrorWrap: errwrap.NewErrorWrap(wrapErr(errCode)),
 	}
 }
 
