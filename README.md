@@ -85,9 +85,34 @@ This design makes errcode highly extensible, inter-operable, and structure prese
 It is easy to gradually introduce errcode into a project.
 
 
-## Example
+## Code Examples
 
-Creating a custom ErrorCode:
+### Using a built-in ErrorCode:
+
+For code doing HTTP or GRPC and with simple client needs, the built in error codes may suffice.
+
+``` go
+err := errors.New("not found")
+errCode := errcode.NewNotFoundErr(err)
+```
+
+## Sending an error code to a client
+
+``` go
+// Given just a type of error, give an error code to a client if it is present
+if errCode := errcode.CodeChain(err); errCode != nil {
+	// Setting the code in a header
+	// Our error code inherits StatusBadRequest from its parent code "state"
+	w.Header().Set("X-Error-Code", errCode.Code().CodeStr().String())
+
+	// Using a JSON body.
+	// If an unwrapped error defines HasClientData then that data will be written as part of the JSON response.
+	// type HasClientData interface { GetClientData() interface{} }
+	rd.JSON(w, errCode.Code().HTTPCode(), errcode.NewJSONFormat(errCode))
+}
+```
+
+### Creating a custom ErrorCode:
 
 ``` go
 // First define a normal error type
@@ -112,22 +137,6 @@ func (e PathBlocked) Code() Code {
 }
 
 var _ ErrorCode = (*PathBlocked)(nil)  // assert implements the ErrorCode interface
-```
-
-Now lets see how you can send the error code to a client in a way that works with your exising code.
-
-``` go
-// Given just a type of error, give an error code to a client if it is present
-if errCode := errcode.CodeChain(err); errCode != nil {
-	// If it helps, you can set the code a header
-	w.Header().Set("X-Error-Code", errCode.Code().CodeStr().String())
-
-	// But the code will also be in the JSON body
-	// Codes have HTTP codes attached as meta data.
-	// You can also attach other kinds of meta data to codes.
-	// Our error code inherits StatusBadRequest from its parent code "state"
-	rd.JSON(w, errCode.Code().HTTPCode(), errcode.NewJSONFormat(errCode))
-}
 ```
 
 Let see a usage site. This example will include an annotation concept of "operation".
