@@ -100,15 +100,6 @@ func (e MultiUserCode) GetUserMsg() string {
 
 var _ UserCode = (*MultiUserCode)(nil) // assert implements interface
 
-// A MultiUsersCode is similar to a MultiUserCode but only contains UserCode
-type MultiUsersCode struct{ multiCode[UserCode, UserCode] }
-
-func (e MultiUsersCode) GetUserMsg() string {
-	return e.ErrCode.GetUserMsg()
-}
-
-var _ UserCode = (*MultiUsersCode)(nil) // assert implements interface
-
 // Combine constructs a single ErrorCode as a [MultiErrorCode].
 func Combine(initial ErrorCode, others ...error) ErrorCode {
 	if len(others) == 0 && initial != nil {
@@ -125,23 +116,7 @@ func Combine(initial ErrorCode, others ...error) ErrorCode {
 	return &MultiErrorCode{multiErrCode}
 }
 
-// CombineUsers constructs a single UserCode as a [MultiUsersCode].
-func CombineUsers(initial UserCode, others ...UserCode) UserCode {
-	if len(others) == 0 && initial != nil {
-		return initial
-	}
-	combined := combineGeneric(initial, others...)
-	if combined == nil {
-		return nil
-	}
-	multiErrCode := multiCode[UserCode, UserCode]{
-		ErrCode: combined.ErrCode,
-		rest:    combined.rest,
-	}
-	return &MultiUsersCode{multiErrCode}
-}
-
-// CombineUser constructs a single UserCode as a [MultiUsersCode].
+// CombineUser constructs a single UserCode as a [MultiUserCode].
 func CombineUser(initial UserCode, others ...error) UserCode {
 	if len(others) == 0 && initial != nil {
 		return initial
