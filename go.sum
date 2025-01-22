@@ -1,2 +1,8 @@
-github.com/gregwebs/errors v1.16.0 h1:7dlwrZAfPW3WSDEoXJ95x95QBtRqDNmJp2tZ/Xd9PcI=
-github.com/gregwebs/errors v1.16.0/go.mod h1:1NkCObP7+scylHlC69lwHl2ACOHwktWYrZV4EJDEl6g=
+github.com/gregwebs/errors v1.40.1 h1:xL9Xh5kz95K/hWuieLQfluH501iVJWm57XgljZrs2yI=
+github.com/gregwebs/errors v1.40.1/go.mod h1:uBv4YWGzx8CH5zX4yVeYx2qnFUl1Hog/5ESOgYXyAZQ=
+github.com/gregwebs/errors/errwrap v0.1.1 h1:6tW81ugkhnAtoY81AS/OxwU5gu/5Ug/F9unLsWIzRU8=
+github.com/gregwebs/errors/errwrap v0.1.1/go.mod h1:Xqoa1jjxE/0w8gjUTyRQEOXrG8d+sAwQmZEwnUyTtig=
+github.com/gregwebs/errors/slogerr v0.1.1 h1:QES6SiI2MRNUCsWzxIweSdHQ6ep9iVv6FH/AEggzLrk=
+github.com/gregwebs/errors/slogerr v0.1.1/go.mod h1:emBiGGVdfUO1UnPUCvgkN49Y2eL+EClImkMR+4Iq0rY=
+github.com/gregwebs/stackfmt v0.1.1 h1:bqHZv69OGARsyNPD4tJfkJnu5oWjA86dISQKKfFt98A=
+github.com/gregwebs/stackfmt v0.1.1/go.mod h1:MQWvus3s9juULflTEiFIllieKiz7AnX7i4HWyPOs2nQ=

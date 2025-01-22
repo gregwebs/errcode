@@ -14,17 +14,11 @@ func (e MultiErrors) Error() string {
 	return "MultiErrors"
 }
 
-// Errors fullfills the ErrorGroup inteface
-func (e MultiErrors) Errors() []error {
-	return e.Multi
-}
-
 func (e MultiErrors) Unwrap() []error {
 	return e.Multi
 }
 
 var _ error = MultiErrors{}
-var _ errors.ErrorGroup = MultiErrors{}
 
 func AssertLength[Any any](t *testing.T, slice []Any, expected int) {
 	if len(slice) != expected {

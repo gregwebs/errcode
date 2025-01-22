@@ -5,9 +5,11 @@
 package errcode
 
 import (
+	stderrors "errors"
 	"fmt"
 
 	"github.com/gregwebs/errors"
+	"github.com/gregwebs/errors/errwrap"
 )
 
 // ErrorCodes return all errors (including those grouped) that are of interface ErrorCode.
@@ -15,7 +17,7 @@ import (
 func ErrorCodes(err error) []ErrorCode {
 	errorCodes := make([]ErrorCode, 0)
 	//nolint:staticcheck
-	errors.WalkDeep(err, func(err error) bool {
+	errwrap.WalkDeep(err, func(err error) bool {
 		if errcode, ok := err.(ErrorCode); ok {
 			// avoid duplicating codes
 			if len(errorCodes) == 0 || errorCodes[len(errorCodes)-1].Code().codeStr != errcode.Code().codeStr {
@@ -40,8 +42,8 @@ func (e multiCode[Err, Other]) Error() string {
 	return output
 }
 
-// Errors fullfills the errorGroup inteface
-func (e multiCode[Err, Other]) Errors() []error {
+// Unwrap fullfills the unwrapsError inteface
+func (e multiCode[Err, Other]) Unwrap() []error {
 	rest := make([]error, len(e.rest))
 	for i, err := range e.rest {
 		rest[i] = error(err)
@@ -52,11 +54,6 @@ func (e multiCode[Err, Other]) Errors() []error {
 // Code fullfills the ErrorCode inteface
 func (e multiCode[Err, Other]) Code() Code {
 	return e.ErrCode.Code()
-}
-
-// Unwrap fullfills the errors package Unwrap function
-func (e multiCode[Err, Other]) Unwrap() []error {
-	return e.Errors()
 }
 
 func (e multiCode[Err, Other]) First() Err {
@@ -88,7 +85,6 @@ func combineGeneric[Err ErrorCode, Other error](initial Err, others ...Other) *m
 
 var _ ErrorCode = (*multiCode[ErrorCode, error])(nil)     // assert implements interface
 var _ unwrapsError = (*multiCode[ErrorCode, error])(nil)  // assert implements interface
-var _ errorGroup = (*multiCode[ErrorCode, error])(nil)    // assert implements interface
 var _ fmt.Formatter = (*multiCode[ErrorCode, error])(nil) // assert implements interface
 
 // A MultiErrorCode contains at least one ErrorCode and uses that to satisfy the ErrorCode and related interfaces
@@ -165,10 +161,6 @@ type unwrapsError interface {
 	Unwrap() []error
 }
 
-type errorGroup interface {
-	Errors() []error
-}
-
 // This interface is checked by errors.As
 type asAny interface {
 	As(any) bool
@@ -192,13 +184,13 @@ func CodeChain(errInput error) ErrorCode {
 			}
 		}
 
-		eg, egOK := err.(errorGroup)
+		eg, egOK := err.(unwrapsError)
 		if !egOK && asOK && as.As(eg) {
 			egOK = true
 		}
 		if egOK {
 			group := []ErrorCode{}
-			for _, errItem := range eg.Errors() {
+			for _, errItem := range eg.Unwrap() {
 				if itemCode := CodeChain(errItem); itemCode != nil {
 					group = append(group, itemCode)
 				}
@@ -228,7 +220,7 @@ func CodeChain(errInput error) ErrorCode {
 		if errCode := checkError(err); errCode != nil {
 			return ChainContext{errCode, errInput}
 		}
-		err = errors.Unwrap(err)
+		err = stderrors.Unwrap(err)
 	}
 
 	return nil
@@ -250,7 +242,7 @@ func (err ChainContext) Error() string {
 
 // Unwrap satisfies the errors package Unwrap function
 func (err ChainContext) Unwrap() error {
-	if wrapped := errors.Unwrap(err.Top); wrapped != nil {
+	if wrapped := stderrors.Unwrap(err.Top); wrapped != nil {
 		return wrapped
 	}
 	return err.ErrorCode

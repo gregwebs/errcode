@@ -6,6 +6,7 @@ package errcode
 
 import (
 	"github.com/gregwebs/errors"
+	"github.com/gregwebs/stackfmt"
 )
 
 // StackTrace retrieves the errors.StackTrace from the error if it is present.
@@ -13,7 +14,7 @@ import (
 //
 // StackTrace looks to see if the error is a StackTracer or if an Unwrap of the error is a StackTracer.
 // It will return the stack trace from the deepest error it can find.
-func StackTrace(err error) errors.StackTrace {
+func StackTrace(err error) stackfmt.StackTrace {
 	if tracer := errors.GetStackTracer(err); tracer != nil {
 		return tracer.StackTrace()
 	}
@@ -26,11 +27,11 @@ func StackTrace(err error) errors.StackTrace {
 // Its also possible to define your own structures that satisfy the [errors.StackTracer] interface.
 type StackCode struct {
 	ErrorCode
-	GetStack errors.StackTracer
+	GetStack stackfmt.StackTracer
 }
 
 // StackTrace fulfills the [errors.StackTracer] interface
-func (e StackCode) StackTrace() errors.StackTrace {
+func (e StackCode) StackTrace() stackfmt.StackTrace {
 	return e.GetStack.StackTrace()
 }
 
@@ -54,7 +55,7 @@ func NewStackCode(err ErrorCode, position ...int) StackCode {
 	if len(position) > 0 {
 		stackPosition = position[0]
 	}
-	return StackCode{ErrorCode: err, GetStack: errors.NewStack(stackPosition)}
+	return StackCode{ErrorCode: err, GetStack: stackfmt.NewStackSkip(stackPosition)}
 }
 
 // Unwrap satisfies the errors package Unwrap function

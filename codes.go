@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gregwebs/errors"
+	"github.com/gregwebs/errors/errwrap"
 )
 
 var (
@@ -76,7 +76,7 @@ var (
 // Look at the implementation of invalidInput, InternalErr, and notFound.
 type CodedError struct {
 	GetCode Code
-	*errors.ErrorWrap
+	*errwrap.ErrorWrap
 }
 
 // NewCodedError is a helper for constructing error codes.
@@ -101,13 +101,13 @@ func newCodedError(err error, code Code) (CodedError, ErrorCode) {
 	}
 	return CodedError{
 		GetCode:   code,
-		ErrorWrap: errors.NewErrorWrap(err),
+		ErrorWrap: errwrap.NewErrorWrap(err),
 	}, alternative
 }
 
-var _ ErrorCode = (*CodedError)(nil)           // assert implements interface
-var _ unwrapError = (*CodedError)(nil)         // assert implements interface
-var _ errors.ErrorWrapper = (*CodedError)(nil) // assert implements interface
+var _ ErrorCode = (*CodedError)(nil)            // assert implements interface
+var _ unwrapError = (*CodedError)(nil)          // assert implements interface
+var _ errwrap.ErrorWrapper = (*CodedError)(nil) // assert implements interface
 
 // Code returns the GetCode field
 func (e CodedError) Code() Code {
@@ -171,7 +171,7 @@ func makeInternalStackCode(defaultCode Code) func(error) StackCode {
 		}
 		return NewStackCode(CodedError{
 			GetCode:   code,
-			ErrorWrap: errors.NewErrorWrap(err),
+			ErrorWrap: errwrap.NewErrorWrap(err),
 		}, 3)
 	}
 }

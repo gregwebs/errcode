@@ -12,10 +12,11 @@ import (
 
 	"github.com/gregwebs/errcode"
 	"github.com/gregwebs/errors"
+	"github.com/gregwebs/errors/errwrap"
+	"github.com/gregwebs/stackfmt"
 )
 
-// Test setting the HTTP code
-const httpCodeStr = "input.http"
+const httpCodeStr = "input.http" // Test setting the HTTP code
 
 var codeHTTP900 = errcode.InvalidInputCode.Child(httpCodeStr).SetHTTP(900)
 
@@ -33,8 +34,7 @@ func TestHttpErrorCode(t *testing.T) {
 	ClientDataEquals(t, http, nil, httpCodeStr)
 }
 
-// Test a very simple error
-type MinimalError struct{}
+type MinimalError struct{} // Test a very simple error
 
 func (e MinimalError) Error() string      { return "error" }
 func (e MinimalError) Code() errcode.Code { return registeredCode }
@@ -138,8 +138,8 @@ func (e *ErrorWrapper) WrapError(apply func(err error) error) {
 	e.Err = apply(e.Err)
 }
 
-var _ errcode.ErrorCode = (*ErrorWrapper)(nil)   // assert implements interface
-var _ errors.ErrorWrapper = (*ErrorWrapper)(nil) // assert implements interface
+var _ errcode.ErrorCode = (*ErrorWrapper)(nil)    // assert implements interface
+var _ errwrap.ErrorWrapper = (*ErrorWrapper)(nil) // assert implements interface
 
 type Struct1 struct{ A string }
 type StructConstError1 struct{ A string }
@@ -162,10 +162,11 @@ func (e Struct2) Error() string {
 }
 
 func TestErrorWrapperCode(t *testing.T) {
-	wrapped := &ErrorWrapper{Err: errors.New("error")}
+	err := errors.New("error")
+	wrapped := &ErrorWrapper{Err: err}
 	AssertCodes(t, wrapped)
 	ErrorEquals(t, wrapped, "error")
-	ClientDataEqualsDef(t, wrapped, errors.New("error"))
+	ClientDataEqualsDef(t, wrapped, err)
 	s2 := Struct2{A: "A", B: "B"}
 	wrappedS2 := &ErrorWrapper{Err: s2}
 	AssertCodes(t, wrappedS2)
@@ -509,7 +510,7 @@ func AssertUserMsg(t *testing.T, v interface{}, msg string) {
 	}
 }
 
-func AssertStackEquals(t *testing.T, given errcode.ErrorCode, stExpected errors.StackTrace) {
+func AssertStackEquals(t *testing.T, given errcode.ErrorCode, stExpected stackfmt.StackTrace) {
 	t.Helper()
 	stGiven := errcode.StackTrace(given)
 	if stGiven == nil || stExpected == nil || stGiven[0] != stExpected[0] {
