@@ -31,7 +31,7 @@ func TestErrorResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected json marshal success, got %v", err)
 	}
-	expectedJSON := `{"code":"internal","msg":"wrapped: goa test","data":{}}`
+	expectedJSON := `{"code":"internal","msg":"wrapped: goa test","data":null}`
 	if string(jsonBytes) != expectedJSON {
 		t.Fatalf("expected %s, got %s", expectedJSON, string(jsonBytes))
 	}
