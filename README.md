@@ -10,12 +10,30 @@ errcode supports hierachy and associating to metadata such as HTTP codes.
 The common simple form of this is to properly attach an HTTP code to an error.
 When clients need to react to specific errors, both the HTTP code and a more specific error code can be associated to the error.
 
+See [this blog post](https://blog.gregweber.info/blog/go-error-codes/) for more introduction and documentation.
+
+See the [go docs](https://godoc.org/github.com/gregwebs/errcode) for extensive API documentation.
+
 ## Status
 
 This library has been used in production for years.
 The core types and API have not changed but there is ongoing experimentation with newer APIs.
 
-# errcode overview
+## Features
+
+* structured error representation
+* Uses the Unwrap model where errors can be annotated and the underlying code can be unwrapped
+* Internal errors show a stack trace but others don't.
+* Operation annotation. This concept is [explained here](https://commandcenter.blogspot.com/2017/12/error-handling-in-upspin.html).
+* Works for multiple errors when the Errors() interface is used. See the `Combine` function for constructing multiple error codes.
+* Extensible metadata. See how SetHTTPCode is implemented.
+* Integration with existing error codes
+  * HTTP
+  * GRPC (provided by separate grpc package)
+  * GOA error types (provided by separate goa package)
+
+
+## Overview
 
 This package extends go errors via interfaces to have error codes.
 
@@ -27,17 +45,6 @@ type ErrorCode interface {
 ```
 
 There are existing generic error codes and constructors for them such as `NewNotFoundErr`.
-
-A Code is a string that can be placed in a hierarchy:
-
-```go
-type Code struct {
-	codeStr CodeStr
-	Parent  *Code
-}
-
-type CodeStr string
-```
 
 The package also provides `UserCode` designed to provide a user-facing message for end users
 rather than technical error messages.
@@ -55,20 +62,6 @@ type HasUserMsg interface {
 ```
 
 A UserCode can be created with `errcode.WithUserMsg` or `errcode.UserMsg`.
-
-See the [go docs](https://godoc.org/github.com/gregwebs/errcode) for extensive API documentation.
-
-## Features
-
-* structured error representation
-* Uses the Unwrap model where errors can be annotated and the underlying code can be unwrapped
-* Internal errors show a stack trace but others don't.
-* Operation annotation. This concept is [explained here](https://commandcenter.blogspot.com/2017/12/error-handling-in-upspin.html).
-* Works for multiple errors when the Errors() interface is used. See the `Combine` function for constructing multiple error codes.
-* Extensible metadata. See how SetHTTPCode is implemented.
-* Integration with existing error codes
-  * HTTP
-  * GRPC (provided by separate grpc package)
 
 
 ## Comparison
