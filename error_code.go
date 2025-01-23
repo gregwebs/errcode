@@ -165,11 +165,11 @@ type JSONFormat struct {
 	Others    []JSONFormat `json:"others,omitempty"`
 }
 
-// OperationClientData gives the results of both the ClientData and Operation functions.
+// operationClientData gives the results of both the ClientData and Operation functions.
 // The Operation function is applied to the original ErrorCode.
 // If that does not return an operation, it is applied to the result of ClientData.
 // This function is used by NewJSONFormat to fill JSONFormat.
-func OperationClientData(errCode ErrorCode) (string, interface{}) {
+func operationClientData(errCode ErrorCode) (string, interface{}) {
 	op := Operation(errCode)
 	data := ClientData(errCode)
 	if op == "" && data != nil {
@@ -196,7 +196,7 @@ func newJSONFormat(errCode ErrorCode, recur bool) JSONFormat {
 		}
 	}
 
-	op, data := OperationClientData(errCode)
+	op, data := operationClientData(errCode)
 
 	msg := GetUserMsg(errCode)
 	if msg == "" {

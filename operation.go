@@ -14,7 +14,7 @@ package errcode
 // GetOperation is defined, but generally the operation should be retrieved with Operation().
 // Operation() will check if a HasOperation interface exists.
 // As an alternative to defining this interface
-// you can use an existing wrapper (OpErrCode via AddOp) or embedding (EmbedOp) that has already defined it.
+// you can use an existing wrapper (AddOp) or embedding (EmbedOp) that has already defined it.
 type HasOperation interface {
 	GetOperation() string
 }
@@ -46,50 +46,50 @@ type OpCode interface {
 	HasOperation
 }
 
-// OpErrCode is an ErrorCode with an Operation field attached.
+// opErrCode is an ErrorCode with an Operation field attached.
 // This can be conveniently constructed with Op() and AddTo() to record the operation information for the error.
 // However, it isn't required to be used, see the HasOperation documentation for alternatives.
-type OpErrCode struct {
+type opErrCode struct {
 	ErrorCode
 	EmbedOp
 }
 
 // Unwrap satisfies the errors package Unwrap function
-func (e OpErrCode) Unwrap() error {
+func (e opErrCode) Unwrap() error {
 	return e.ErrorCode
 }
 
 // Error prefixes the operation to the underlying Err Error.
-func (e OpErrCode) Error() string {
+func (e opErrCode) Error() string {
 	return e.Op + ": " + e.ErrorCode.Error()
 }
 
-var _ ErrorCode = (*OpErrCode)(nil)    // assert implements interface
-var _ HasOperation = (*OpErrCode)(nil) // assert implements interface
-var _ OpCode = (*OpErrCode)(nil)       // assert implements interface
-var _ unwrapError = (*OpErrCode)(nil)  // assert implements interface
+var _ ErrorCode = (*opErrCode)(nil)    // assert implements interface
+var _ HasOperation = (*opErrCode)(nil) // assert implements interface
+var _ OpCode = (*opErrCode)(nil)       // assert implements interface
+var _ unwrapError = (*opErrCode)(nil)  // assert implements interface
 
 // AddOp is constructed by Op. It allows method chaining with AddTo.
-type AddOp func(ErrorCode) OpErrCode
+type AddOp func(ErrorCode) OpCode
 
 // AddTo adds the operation from Op to the ErrorCode
-func (addOp AddOp) AddTo(err ErrorCode) OpErrCode {
+func (addOp AddOp) AddTo(err ErrorCode) OpCode {
 	return addOp(err)
 }
 
 // Op adds an operation to an ErrorCode with AddTo.
-// This converts the error to the type OpErrCode.
+// This converts the error to the type OpCode.
 //
 //	op := errcode.Op("path.move.x")
 //	if start < obstable && obstacle < end  {
 //		return op.AddTo(PathBlocked{start, end, obstacle})
 //	}
 func Op(operation string) AddOp {
-	return func(err ErrorCode) OpErrCode {
+	return func(err ErrorCode) OpCode {
 		if err == nil {
 			panic("Op errorcode is nil")
 		}
-		return OpErrCode{
+		return opErrCode{
 			ErrorCode: err,
 			EmbedOp:   EmbedOp{Op: operation},
 		}

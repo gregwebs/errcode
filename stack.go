@@ -9,18 +9,6 @@ import (
 	"github.com/gregwebs/stackfmt"
 )
 
-// StackTrace retrieves the errors.StackTrace from the error if it is present.
-// If there is not StackTrace it will return nil
-//
-// StackTrace looks to see if the error is a StackTracer or if an Unwrap of the error is a StackTracer.
-// It will return the stack trace from the deepest error it can find.
-func StackTrace(err error) stackfmt.StackTrace {
-	if tracer := errors.GetStackTracer(err); tracer != nil {
-		return tracer.StackTrace()
-	}
-	return nil
-}
-
 // StackCode is an [ErrorCode] with stack trace information attached.
 // This may be used as a convenience to record the strack trace information for the error.
 // Stack traces are provided by [NewInternalErr].

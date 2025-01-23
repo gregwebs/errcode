@@ -214,7 +214,7 @@ func TestNewInvalidInputErr(t *testing.T) {
 	ErrorEquals(t, err, "error")
 	ClientDataEquals(t, wrappedInternalErr, nil, internalCodeStr, MinimalError{})
 	// It should use the original stack trace, not the wrapped
-	AssertStackEquals(t, wrappedInternalErr, errcode.StackTrace(internalErr))
+	AssertStackEquals(t, wrappedInternalErr, StackTrace(internalErr))
 
 	err = errcode.NewInternalErr(InternalChild{})
 	AssertCode(t, err, internalChildCodeStr)
@@ -238,7 +238,7 @@ func TestStackTrace(t *testing.T) {
 	ErrorEquals(t, err, "errors stack")
 	ClientDataEquals(t, wrappedInternalErr, nil, internalCodeStr)
 	// It should use the original stack trace, not the wrapped
-	AssertStackEquals(t, wrappedInternalErr, errcode.StackTrace(err))
+	AssertStackEquals(t, wrappedInternalErr, StackTrace(err))
 }
 
 func TestNewInternalErr(t *testing.T) {
@@ -369,15 +369,15 @@ func TestUserMsg(t *testing.T) {
 	UserMsgEquals(t, &ErrorWrapper{Err: ue}, "user")
 	UserMsgEquals(t, &ErrorWrapper{Err: UserMsgErrorEmbed{EmbedUserMsg: errcode.EmbedUserMsg{Msg: "field"}}}, "field")
 
-	msgErrCode := errcode.UserMsgErrCode{Msg: "msg", ErrorCode: MinimalError{}}
+	msgErrCode := errcode.UserMsg("msg").AddTo(MinimalError{})
 	AssertUserMsg(t, msgErrCode, "msg")
 	UserMsgEquals(t, msgErrCode, "msg")
 
 	UserMsgEquals(t, &ErrorWrapper{Err: msgErrCode}, "msg")
-	wrappedUser := &ErrorWrapper{Err: errcode.UserMsgErrCode{Msg: "msg", ErrorCode: ue}}
+	wrappedUser := &ErrorWrapper{Err: errcode.UserMsg("msg").AddTo(ue)}
 	AssertUserMsg(t, wrappedUser, "msg")
 	UserMsgEquals(t, wrappedUser, "msg")
-	UserMsgEquals(t, errcode.UserMsgErrCode{Msg: "msg", ErrorCode: ue}, "msg")
+	UserMsgEquals(t, errcode.UserMsg("msg").AddTo(ue), "msg")
 }
 
 func AssertCodes(t *testing.T, code errcode.ErrorCode, codeStrs ...errcode.CodeStr) {
@@ -480,7 +480,7 @@ func jsonEquals(t *testing.T, errPrefix string, expectedIn interface{}, gotIn in
 
 func OpEquals(t *testing.T, code errcode.ErrorCode, op string) {
 	t.Helper()
-	opGot, _ := errcode.OperationClientData(code)
+	opGot := errcode.Operation(code)
 	if opGot != op {
 		t.Errorf("\nOp expected: %#v\n but got: %#v", op, opGot)
 	}
@@ -512,8 +512,20 @@ func AssertUserMsg(t *testing.T, v interface{}, msg string) {
 
 func AssertStackEquals(t *testing.T, given errcode.ErrorCode, stExpected stackfmt.StackTrace) {
 	t.Helper()
-	stGiven := errcode.StackTrace(given)
+	stGiven := StackTrace(given)
 	if stGiven == nil || stExpected == nil || stGiven[0] != stExpected[0] {
 		t.Errorf("\nStack expected: %#v\n Stack but got: %#v", stExpected[0], stGiven[0])
 	}
+}
+
+// StackTrace retrieves the errors.StackTrace from the error if it is present.
+// If there is not StackTrace it will return nil
+//
+// StackTrace looks to see if the error is a StackTracer or if an Unwrap of the error is a StackTracer.
+// It will return the stack trace from the deepest error it can find.
+func StackTrace(err error) stackfmt.StackTrace {
+	if tracer := errors.GetStackTracer(err); tracer != nil {
+		return tracer.StackTrace()
+	}
+	return nil
 }

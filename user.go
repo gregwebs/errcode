@@ -46,32 +46,32 @@ func (e EmbedUserMsg) GetUserMsg() string {
 	return e.Msg
 }
 
-// UserMsgErrCode is an ErrorCode with a Msg field attached.
+// userMsgErrCode is an ErrorCode with a Msg field attached.
 // This can be conveniently constructed with NewUserMsg and AddTo or WithUserMsg
 // see the HasUserMsg documentation for alternatives.
-type UserMsgErrCode struct {
+type userMsgErrCode struct {
 	ErrorCode
 	Msg string
 }
 
 // Unwrap satisfies the errors package Unwrap function
-func (e UserMsgErrCode) Unwrap() error {
+func (e userMsgErrCode) Unwrap() error {
 	return e.ErrorCode
 }
 
 // Error prefixes the user message to the underlying Err Error.
-func (e UserMsgErrCode) Error() string {
+func (e userMsgErrCode) Error() string {
 	return e.Msg + ": " + e.ErrorCode.Error()
 }
 
 // GetUserMsg satisfies the [HasUserMsg] interface.
-func (e UserMsgErrCode) GetUserMsg() string {
+func (e userMsgErrCode) GetUserMsg() string {
 	return e.Msg
 }
 
-var _ ErrorCode = (*UserMsgErrCode)(nil)   // assert implements interface
-var _ HasUserMsg = (*UserMsgErrCode)(nil)  // assert implements interface
-var _ unwrapError = (*UserMsgErrCode)(nil) // assert implements interface
+var _ ErrorCode = (*userMsgErrCode)(nil)   // assert implements interface
+var _ HasUserMsg = (*userMsgErrCode)(nil)  // assert implements interface
+var _ unwrapError = (*userMsgErrCode)(nil) // assert implements interface
 
 // AddUserMsg is constructed by UserMsg. It allows method chaining with AddTo.
 type AddUserMsg func(ErrorCode) UserCode
@@ -94,11 +94,11 @@ func UserMsg(msg string) AddUserMsg {
 	}
 }
 
-// WithUserMsg creates a UserMsgErrCode
+// WithUserMsg creates a UserCode
 // Panics if msg is empty or err is nil.
 func WithUserMsg(msg string, err ErrorCode) UserCode {
 	if err == nil {
 		return nil
 	}
-	return UserMsgErrCode{Msg: msg, ErrorCode: err}
+	return userMsgErrCode{Msg: msg, ErrorCode: err}
 }
